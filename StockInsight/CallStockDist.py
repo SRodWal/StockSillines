@@ -1,10 +1,13 @@
-import pandas as pd
-import numpy as np
+#Yahoo Finance & Data collection
 import yfinance as yf
-import pandas_datareader as pdr
+import pandas as pd
+#Numeric and data treatment
+import numpy as np
 import datetime as dt
 import seaborn as sb
+#Graphs
 import matplotlib.pyplot as plt
+import plotly.graph_pbjects as go
 
 # A script to analyze stock prices and temproral changes.
 # This is designed for medium-short term investments (No interdaily informacion)

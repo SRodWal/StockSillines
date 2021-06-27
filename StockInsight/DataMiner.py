@@ -16,13 +16,18 @@ import plotly.graph_objects as go
 
 ###Define input variables
 StockList = ["BA","FSLR","HQCL"] #List of Stocks
-NameList = ["Boeing Co.", "First Solar, Inc." "Hanwha Q CELLS Co."] # Names of the tickers
+NameList = ["Boeing Co.", "First Solar, Inc.", "Hanwha Q CELLS Co."] # Names of the tickers
 period = "5wk" #Time backwards
 interval = "5m" # Time between mesurements  
-
+filedir = os.getcwd()
+#Import & Export lists of stocks
+tickerdf = pd.DataFrame()
+tickerdf["Ticker"] = StockList
+tickerdf["Name"] = NameList
+tickerdf.to_excel("TIckersList.xlsx", index = False)
 
 ###Objective folder
-filedir = os.getcwd()+"\\Data"   
+datadir = filedir+"\\DATA"  
 # Read files in data folder 
 
 

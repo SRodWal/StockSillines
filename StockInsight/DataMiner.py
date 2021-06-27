@@ -10,6 +10,7 @@ import seaborn as sb
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from plotly.offline import plot
+import plotly.express as px
 
 
 # A script to analyze stock prices and temproral changes.
@@ -18,7 +19,7 @@ from plotly.offline import plot
 
 ###Define input variables
 StockList = ["BA","FSLR","HQCL"] #List of Stocks
-NameList = ["Boeing Co.", "First Solar, Inc.", "Hanwha Q CELLS Co."] # Names of the tickers
+NameList = ["Boeing Co", "First Solar, Inc", "Hanwha Q CELLS Co"] # Names of the tickers
 period = "5wk" #Time backwards
 interval = "5m" # Time between mesurements  
 filedir = os.getcwd()
@@ -32,15 +33,14 @@ filedir = os.getcwd()
 datadir = filedir+"\\DATA"  
 ##Writes data in excels
 #create excels for each ticker: Historic (daily), Last 6 months (5min intervals)
-for ticker in StockList[0:1]:
-    data = yf.download(ticker, period = period, interval = interval)
+for ticker,name in zip(StockList, NameList):
+    data = yf.download(ticker, period = "max", interval = "1d")
     #data = data.reset_index()
     #candledata = go.Candlestick(x = data["Datetime"] ,open = data["Open"], high = data["High"],low = data["Low"], close = data["Close"])
     candledata = go.Candlestick(open = data.Open, high = data.High,low = data.Low, close = data.Close)
     fig = go.Figure(data = [candledata])
-    plot(fig, auto_open = True)
-print(data)
-
+    fig.write_html(datadir+"\\Hist_"+name+".html")
+    
 
 
 

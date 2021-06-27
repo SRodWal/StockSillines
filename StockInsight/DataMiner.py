@@ -9,6 +9,8 @@ import seaborn as sb
 #Graphs
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+from plotly.offline import plot
+
 
 # A script to analyze stock prices and temproral changes.
 # This is designed for medium-short term investments (No interdaily informacion)
@@ -30,12 +32,14 @@ filedir = os.getcwd()
 datadir = filedir+"\\DATA"  
 ##Writes data in excels
 #create excels for each ticker: Historic (daily), Last 6 months (5min intervals)
-for ticker in StockList:
+for ticker in StockList[0:1]:
     data = yf.download(ticker, period = period, interval = interval)
-    candledata = [go.Candlestick(x = data.index,open = data["Open"], high = data["High"],low = data["Low"], close = data["Close"])]
-    fig = go.Figure(data = candledata)
-    fig.show()
-    print(data)
+    #data = data.reset_index()
+    #candledata = go.Candlestick(x = data["Datetime"] ,open = data["Open"], high = data["High"],low = data["Low"], close = data["Close"])
+    candledata = go.Candlestick(open = data.Open, high = data.High,low = data.Low, close = data.Close)
+    fig = go.Figure(data = [candledata])
+    plot(fig, auto_open = True)
+print(data)
 
 
 

@@ -34,12 +34,14 @@ datadir = filedir+"\\DATA"
 ##Writes data in excels
 #create excels for each ticker: Historic (daily), Last 6 months (5min intervals)
 for ticker,name in zip(StockList, NameList):
-    data = yf.download(ticker, period = "max", interval = "1d")
+    Rawdata = yf.Ticker(ticker) #Retrieves all stock information
+    data = Rawdata.history(period = "max") # Stock daily historic data
     #data = data.reset_index()
     #candledata = go.Candlestick(x = data["Datetime"] ,open = data["Open"], high = data["High"],low = data["Low"], close = data["Close"])
     candledata = go.Candlestick(open = data.Open, high = data.High,low = data.Low, close = data.Close)
     fig = go.Figure(data = [candledata])
-    fig.write_html(datadir+"\\Hist_"+name+".html")
+    fig.update_layout(title = "Historic "+"name"+" stock prices", )
+    #fig.write_html(datadir+"\\Hist_"+name+".html")
     
 
 

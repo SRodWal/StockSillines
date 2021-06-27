@@ -20,15 +20,24 @@ NameList = ["Boeing Co.", "First Solar, Inc.", "Hanwha Q CELLS Co."] # Names of 
 period = "5wk" #Time backwards
 interval = "5m" # Time between mesurements  
 filedir = os.getcwd()
-#Import & Export lists of stocks
-tickerdf = pd.DataFrame()
-tickerdf["Ticker"] = StockList
-tickerdf["Name"] = NameList
-tickerdf.to_excel("TIckersList.xlsx", index = False)
+#Export lists of stocks
+#tickerdf = pd.DataFrame()
+#tickerdf["Ticker"] = StockList
+#tickerdf["Name"] = NameList
+#tickerdf.to_excel("TickersList.xlsx", index = False)
 
 ###Objective folder
 datadir = filedir+"\\DATA"  
-# Read files in data folder 
+##Writes data in excels
+#create excels for each ticker: Historic (daily), Last 6 months (5min intervals)
+for ticker in StockList:
+    data = yf.download(ticker, period = period, interval = interval)
+    candledata = [go.Candlestick(x = data.index,open = data["Open"], high = data["High"],low = data["Low"], close = data["Close"])]
+    fig = go.Figure(data = candledata)
+    fig.show()
+    print(data)
+
+
 
 
 

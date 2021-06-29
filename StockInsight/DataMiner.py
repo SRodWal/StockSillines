@@ -9,6 +9,7 @@ import seaborn as sb
 #Graphs
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from plotly.offline import plot
 import plotly.express as px
 
@@ -38,12 +39,13 @@ for ticker,name in zip(StockList, NameList):
     data = Rawdata.history(period = "max") # Stock daily historic data
     textdate = [time.strftime("%m/%d/%Y") for time in data.index]
     Histperiod = textdate[0]+" - "+textdate[-1]
-    #data = data.reset_index()
-    #candledata = go.Candlestick(x = data["Datetime"] ,open = data["Open"], high = data["High"],low = data["Low"], close = data["Close"])
-    candledata = go.Candlestick(x = data.index.tolist(), open = data.Open, high = data.High,low = data.Low, close = data.Close)
-    fig = go.Figure(data = [candledata])
-    #fig.update_layout(title = "Historic "+name+" stock prices", yaxis_title = "USD", xaxis_title = "Period "+Histperiod, 
-     #                 xaxis = dict(tickmode = "array", tickvals = data.reset_index().index.tolist(), ticktext = textdate))
+    candledata = go.Candlestick(x = data.index.tolist(), open = data.Open, high = data.High,low = data.Low, close = data.Close, name = "Pricing")
+    volumedata = go.Scatter(x = data.index.tolist(), y = data.Volume, name = "Volume", yaxis = "y2")
+    fig = make_subplots(specs = [[{"secondary_y": True}]])
+    fig.add_trace(candledata)
+    fig.add_trace(volumedata, secondary_y = True)
+    fig.update_layout(title = "Historic "+name+" stock prices", yaxis_title = "USD", xaxis_title = "Period "+Histperiod, 
+                      )
     fig.write_html(datadir+"\\Hist_"+name+".html")
     
 

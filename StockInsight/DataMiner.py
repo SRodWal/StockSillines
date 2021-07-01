@@ -19,10 +19,8 @@ import plotly.express as px
 
 
 ###Define input variables
-StockList = ["BA.MX","FSLR.MX","0jn9n.MX"] #List of Stocks
-NameList = ["Boeing Co", "First Solar, Inc", "Panasonic Corp"] # Names of the tickers
-period = "5wk" #Time backwards
-interval = "5m" # Time between mesurements  
+StockList = ["BA.MX","FSLR.MX","0jn9n.MX", "APA.MX", "VISTAA.MX","SNPN.MX"] #List of Stocks
+
 
 #Export lists of stocks
 #tickerdf = pd.DataFrame()

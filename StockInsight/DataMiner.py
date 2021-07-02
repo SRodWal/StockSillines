@@ -19,7 +19,9 @@ import plotly.express as px
 
 
 ###Define input variables
-StockList = ["BA.MX","FSLR.MX","0jn9n.MX", "APA.MX", "VISTAA.MX","SNPN.MX"] #List of Stocks
+StockList = ["BA.MX","FSLR.MX","0jn9n.MX", "APA.MX", "VISTAA.MX","SNPN.MX","RDSB.MX","CDEV.MX","NMKA.MX","NEMAKA.MX","ASMLN.MX",
+             "CSIQN.MX", "JKSN.MX","SUN.MX","HON.MX","SIEN.MX","GE.MX","TSLA.MX","TMN.MX","SONYN.MX","HMCN.MX","HYUDN.MX","HOMEX.MX",
+             "ARA.MX","CADUA.MX","NKLA.MX","LEN.MX","SWK.MX","MCN.MX","NESNN.MX","PG.MX","FAST.MX","MCK.MX","APPL.MX",""] #List of Stocks
 
 
 #Export lists of stocks

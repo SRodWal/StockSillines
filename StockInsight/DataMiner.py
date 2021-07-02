@@ -21,7 +21,10 @@ import plotly.express as px
 ###Define input variables
 StockList = ["BA.MX","FSLR.MX","0jn9n.MX", "APA.MX", "VISTAA.MX","SNPN.MX","RDSB.MX","CDEV.MX","NMKA.MX","NEMAKA.MX","ASMLN.MX",
              "CSIQN.MX", "JKSN.MX","SUN.MX","HON.MX","SIEN.MX","GE.MX","TSLA.MX","TMN.MX","SONYN.MX","HMCN.MX","HYUDN.MX","HOMEX.MX",
-             "ARA.MX","CADUA.MX","NKLA.MX","LEN.MX","SWK.MX","MCN.MX","NESNN.MX","PG.MX","FAST.MX","MCK.MX","APPL.MX",""] #List of Stocks
+             "ARA.MX","CADUA.MX","NKLA.MX","LEN.MX","SWK.MX","MCN.MX","NESNN.MX","PG.MX","FAST.MX","MCK.MX","APPL.MX","TSMN.MX","NVDA.MX",
+             "SMSNN.MX","AMD.MX","IPGP.MX","SPCE.MX","MITSN.MX","TXT.MX","QCOM.MX","RIGN.MX","SPKN.MX","RSGA.MX","LINN.MX","AIN.MX",
+             "APD.MX","AMZN.MX","WMT.MX","SHOPN.MX","AEROMEX.MX","UPS.MX","RYAAYN.MX","NEE.MX","IBEN.MX","SO.MX","XEL.MX","FANG.MX",
+             "SEDGN.MX"] #List of Stocks
 
 
 #Export lists of stocks

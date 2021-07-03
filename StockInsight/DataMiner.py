@@ -93,7 +93,7 @@ def Ticker_Portfolio( StockList):
     df.to_excel("Portfolio.xlsx")
     
 #Historical_TickerGraph(StockList)
-Ticker_Portfolio(StockList)
+#Ticker_Portfolio(StockList)
     
 
 

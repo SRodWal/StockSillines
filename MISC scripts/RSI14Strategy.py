@@ -23,8 +23,8 @@ start = dt.datetime(startyear, startmonth, startday)
 now = dt.datetime.now()
 
 ## Grabs the data
-
-df = pdr.get_data_yahoo(ticker, start, now)
+yf.pdr_override()
+df = pdr.get_data_yahoo("AAPL", start = start, end=now)
 
 #Shows the data
 df.tail()

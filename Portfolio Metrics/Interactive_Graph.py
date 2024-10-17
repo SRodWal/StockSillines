@@ -16,6 +16,7 @@ startday = 1
 start_date = dt.datetime(startyear, startmonth, startday)
 
 symbol_list = ["TSM","AEP","MSFT","PEP","WMT","NEE","QCOM"]
+name_list = [x+" - "+yf.Ticker(x).info["longName"] for x in symbol_list]
 
 def int_candlestickgraph(symbol_list,start_date):
 

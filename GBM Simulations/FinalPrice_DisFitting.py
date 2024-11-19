@@ -33,24 +33,18 @@ def GetStatistics(dtype, returns, params_cache):
     skewness = stats.skew(fit_data)
     kurtosis = stats.kurtosis(fit_data)
     var_95 = np.percentile(fit_data, 5)
+    var_75 = np.percentile(fit_data,25)
+    var_25 = np.percentile(fit_data,75)
     cvar_95 = fit_data[fit_data <= var_95].mean()
     iqr = np.percentile(fit_data, 75) - np.percentile(fit_data, 25)
-    return mean, median, std, skewness, kurtosis, var_95, cvar_95, iqr
+    return mean, median,var_95,var_75,var_25, std, skewness, kurtosis, cvar_95, iqr
 
 # Distribution Functions to compare
 dist_name = [
-    'alpha', 'anglit', 'arcsine', 'beta', 'betaprime', 'bradford', 'burr', 'burr12', 'cauchy', 
-    'chi', 'chi2', 'cosine', 'dgamma', 'dweibull', 'erlang', 'expon', 'exponnorm', 'exponweib', 
-    'exponpow', 'f', 'fatiguelife', 'fisk', 'foldcauchy', 'foldnorm', 'frechet_r', 'frechet_l', 
-    'genlogistic', 'genpareto', 'gennorm', 'genexpon', 'genextreme', 'gausshyper', 'gamma', 
-    'gengamma', 'genhalflogistic', 'gilbrat', 'gompertz', 'gumbel_r', 'gumbel_l', 'halfcauchy', 
-    'halflogistic', 'halfnorm', 'halfgennorm', 'hypsecant', 'invgamma', 'invgauss', 'invweibull', 
-    'johnsonsb', 'johnsonsu', 'kstwobign', 'laplace', 'levy', 'levy_l', 'logistic', 'loggamma', 
-    'loglaplace', 'lognorm', 'lomax', 'maxwell', 'mielke', 'nakagami', 'ncx2', 'ncf', 'nct', 
-    'norm', 'pareto', 'pearson3', 'powerlaw', 'powerlognorm', 'powernorm', 'rdist', 'reciprocal', 
-    'rayleigh', 'rice', 'recipinvgauss', 'semicircular', 't', 'triang', 'truncexpon', 'truncnorm', 
-    'tukeylambda', 'uniform', 'wald', 'weibull_min', 'weibull_max'
+    'lognorm', 'norm', 'gamma', 'weibull_min', 'weibull_max', 'genpareto', 'cauchy', 
+    'beta', 't', 'expon', 'gumbel_r', 'gumbel_l', 'logistic', 'pareto', 'nct', 'johnsonsu'
 ]
+
 
 Ndist = 3  # Number of top most probable distributions.
 
@@ -94,10 +88,11 @@ def Dist_Fitting(df_simulations, Ndist,Name):
     y_max = 1.2 * max_density
     
     # Plot top N distributions with statistics
-    table_header = dict(values=['<b>Distribution</b>', '<b>P Value</b>', '<b>Mean</b>', '<b>Median</b>', '<b>Std Dev</b>', '<b>Skewness</b>', '<b>Kurtosis</b>', '<b>VaR 95%</b>', '<b>CVaR 95%</b>', '<b>IQR</b>'],
+    table_header = dict(values=['<b>Distribution</b>', '<b>P Value</b>', '<b>Mean</b>', '<b>Median</b>', '<b>VaR 95%</b>', '<b>VaR 75%</b>', '<b>VaR 25%</b>', '<b>Std Dev</b>', '<b>Skewness</b>', '<b>Kurtosis</b>', '<b>CVaR 95%</b>', '<b>IQR</b>'],
                         fill_color='paleturquoise',
                         align='left')
-    table_cells = {'values': [[], [], [], [], [], [], [], [], [], []],
+    
+    table_cells = {'values': [[], [], [], [], [], [], [], [], [], [], [], []],
                    'fill_color': 'lavender',
                    'align': 'left'}
     
@@ -110,17 +105,11 @@ def Dist_Fitting(df_simulations, Ndist,Name):
         # Add statistics to table
         table_cells['values'][0].append(dtype)
         table_cells['values'][1].append(f'{pvalue:.2%}')
-        table_cells['values'][2].append(f'{stats_result[0]:.2f}')  # Mean
-        table_cells['values'][3].append(f'{stats_result[1]:.2f}')  # Median
-        table_cells['values'][4].append(f'{stats_result[2]:.2f}')  # Std Dev
-        table_cells['values'][5].append(f'{stats_result[3]:.2f}')  # Skewness
-        table_cells['values'][6].append(f'{stats_result[4]:.2f}')  # Kurtosis
-        table_cells['values'][7].append(f'{stats_result[5]:.2f}')  # VaR 95%
-        table_cells['values'][8].append(f'{stats_result[6]:.2f}')  # CVaR 95%
-        table_cells['values'][9].append(f'{stats_result[7]:.2f}')  # IQR
+        for i, value in enumerate(stats_result):
+            table_cells['values'][i+2].append(f'{value:.2f}')
     
     # Add the table to the figure
-    table = go.Table(header=table_header, cells=table_cells, domain=dict(x=[0, 1], y=[0, 0.3]))
+    table = go.Table(header=table_header, cells=table_cells, domain=dict(x=[0, 1], y=[0, 0.28]))
     
     fig.add_trace(table)
     
@@ -129,7 +118,7 @@ def Dist_Fitting(df_simulations, Ndist,Name):
         xaxis_title='Final Price ($)',
         xaxis=dict(showgrid=True, tickformat='$#,##0.00'),
         yaxis_title='Density',
-        yaxis = dict(range = [-1*y_max/2, 1.2*y_max], tickformat = "0.00%"),
+        yaxis = dict(range = [-1*y_max/2.2, 1.2*y_max], tickformat = "0.00%"),
         barmode='overlay',
         autosize=False,
         width=1200,
@@ -143,5 +132,5 @@ def Dist_Fitting(df_simulations, Ndist,Name):
 
 # Example usage
 # Assuming df_simulations is already defined
-Name = "Altria - MO"
-Dist_Fitting(df_simulations, Ndist, Name)
+#Name = "Altria - MO"
+#Dist_Fitting(df_simulations, Ndist, Name)

@@ -23,15 +23,15 @@ warnings.filterwarnings("ignore")
 
 
 
-ticker = "MC.PA"
+ticker = "USDMXN=X"
 current_date = datetime.now()
-end_date =  "2024-06-17"
+end_date =  "2024-10-17"
 end_dateplot = current_date + timedelta(days=365)
 start_plotdate = current_date - timedelta(days=365)
 T = 1 # Horizon Years
 #start_date = current_date - timedelta(days=365)
 start_date = "2023-01-01"
-simulations = 10000 # Number of simulations
+simulations = 1000 # Number of simulations
 adjusted_return = 1
 position_price = (165.93)
 open_position_view = True
@@ -262,12 +262,12 @@ def GBM_Simulation(ticker,start_date,end_date,start_plotdate,end_dateplot,simula
     plt.xlabel('Days')
     plt.ylabel('Price')
     plt.legend(loc = "upper left")   
-    projection_path = "Resources/"+name+"_projection_T="+str(T)+".png"
+    projection_path = "Resources/"+name.replace("/","-")+"_projection_T="+str(T)+".png"
     plt.savefig(projection_path)
     plt.show()
     plt.close()
     
-    # Plot the distribution of final prices
+    # Plot the distribution of final prices & Lastest close price
     final_price = price_paths_df2.loc[max(price_paths_df2.index)]
     plt.figure(figsize=(10, 6),dpi=150)
     plt.hist(final_price, bins=100, edgecolor='black')
@@ -279,7 +279,7 @@ def GBM_Simulation(ticker,start_date,end_date,start_plotdate,end_dateplot,simula
     plt.xlabel('Price')
     plt.ylabel('Frequency')
     plt.legend()
-    distribution_path = "Resources/"+name+"_distribution_T="+str(T)+".png"
+    distribution_path = "Resources/"+name.replace("/","-")+"_distribution_T="+str(T)+".png"
     plt.savefig(distribution_path)
     plt.show()
     
@@ -287,18 +287,18 @@ def GBM_Simulation(ticker,start_date,end_date,start_plotdate,end_dateplot,simula
     
     #Expected Returns
     percentiles = [5,25,45,50,65,75,95]
-    print(name+"; Open position: "+str(position_price)+" with "+str(int(T*365))+" Days Maturity")
+    #print(name+"; Open position: "+str(position_price)+" with "+str(int(T*365))+" Days Maturity")
     data = {
-            "Price Description":[str(p)+"th percentile" for p in percentiles],
-            "Forward Price":[final_price.quantile(p/100).round(2) for p in percentiles]
+            "Price Description":[str(p)+"th percentile" for p in percentiles]+["Close Price"],
+            "Forward Price":[final_price.quantile(p/100).round(2) for p in percentiles]+[round(close_price,2)]
             }
     df_profit = pd.DataFrame(data)
     df_profit["Profit Margin (%)"] = 100*(df_profit["Forward Price"]-position_price)/df_profit["Forward Price"]
     df_profit["Profit Margin (%)"] = df_profit["Profit Margin (%)"].round(2)
     
     #Obtain HWHM prices
-    print(tabulate(df_profit, headers='keys', tablefmt='pretty'))
-    maturity_path = "Resources/"+name+"_maturity_T="+str(T)+".csv"
+    #print(tabulate(df_profit, headers='keys', tablefmt='pretty'))
+    maturity_path = "Resources/"+name.replace("/","-")+"_maturity_T="+str(T)+".csv"
     df_profit.to_csv(maturity_path, index = False)
     
     
@@ -325,8 +325,8 @@ def GBM_Simulation(ticker,start_date,end_date,start_plotdate,end_dateplot,simula
 #tickers = ["AMAT","GOOGL",'QCOM',"NVDA","TSM","KMB","AAPL","MSFT","MO","MA","NEE","PEP","V"]
 #open_prices = [244.47,190.71,188.12,131.38,189.11,147.67,225.34,432.57,51.24,455.40,77.53,165.93,260.8]
 
-#for ticker,position_price in zip(["AAPL"],[225.34222]):
-#    GBM_Simulation(ticker,start_date,"2024-07-3",start_plotdate,end_dateplot,100000,adjusted_return,(225.34222)/1,60/365,False,0)
+#for ticker,position_price in zip(["USDMXN=X"],[20.40]):
+#    GBM_Simulation(ticker,start_date,"2024-07-3",start_plotdate,end_dateplot,100000,adjusted_return,position_price,60/365,False,0)
 
 
 

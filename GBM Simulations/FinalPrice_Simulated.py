@@ -8,7 +8,7 @@ def plot_histogram_with_stats(df_simulations, ticker):
     final_prices = df_simulations.iloc[:, -1]
     close_price = df_simulations.iloc[0,0]
     
-    Tol = 0.025 # Tolerance
+    Tol = 0.0001 # Tolerance
 
     # Calculate percentiles, mean, and median
     percentiles_1 = final_prices.quantile(0.01)
@@ -65,11 +65,14 @@ def plot_histogram_with_stats(df_simulations, ticker):
     try:
         # Save plot to HTML
         pio.write_html(fig, file='final_prices_histogram.html', auto_open=True)
+        return fig
     except Exception as e:
         print(f"Error saving HTML file: {e}")
+    
+
 
 # Example usage
-ticker = 'V'
-close_price = df_simulations.iloc[0,0]  # Example close price
+#ticker = 'V'
+#close_price = df_simulations.iloc[0,0]  # Example close price
 # Assuming df_simulations is already defined
-plot_histogram_with_stats(df_simulations, ticker)
+plot_histogram_with_stats(df_simulations, "Dummy")

@@ -10,6 +10,7 @@ import plotly.graph_objs as go
 import plotly.io as pio
 from scipy import stats
 from concurrent.futures import ProcessPoolExecutor
+
 class InputDialog(QDialog):
     def __init__(self):
         super().__init__()
@@ -198,7 +199,7 @@ def price_probability(df_simulations,price_target,tolerance):
     
     return probability_df
 
-def main():
+def GBMS():
     
     interval_map = {'5m': 1/288, '15m': 1/96, '1h': 1/24, '1d': 1}
     max_days_map = {'5m': 60-1, '15m': 60-1, '1h': 730-1, '1d': 3650} # 3650 days (10 years) for daily data
@@ -359,9 +360,9 @@ def main():
 
     # Save plot to HTML
     pio.write_html(fig, file='GBM_simulations_plot.html', auto_open=True)
-    return mu*monthly_factor,mu*yearly_factor, sigma * np.sqrt(monthly_factor),sigma * np.sqrt(yearly_factor),GBMS_dict["df_simulations"]
+    return mu*monthly_factor,mu*yearly_factor, sigma * np.sqrt(monthly_factor),sigma * np.sqrt(yearly_factor),GBMS_dict["df_simulations"],fig
 
-if __name__ == '__main__':
-       r_mon, v_mon, r_yr, v_yr, df_simulations = main()
+#if __name__ == '__main__':
+       #r_mon, v_mon, r_yr, v_yr, df_simulations = main()
 
 

@@ -17,7 +17,7 @@ def generate_dashboard():
     pio.write_html(fig_dist, file='final_prices_histogram.html', auto_open=True)
 
     # Generate Probability Evolution Plot
-    fig_evo = plot_probability_evolution(df_simulations, price_target=670, tolerance=20)
+    fig_evo = plot_probability_evolution(df_simulations, price_target=220, tolerance=10)
     pio.write_html(fig_evo, file='Price_Evolution.html', auto_open=True)
 
 # Check if the script is run directly

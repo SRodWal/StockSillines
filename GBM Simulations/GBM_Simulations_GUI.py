@@ -100,7 +100,7 @@ def fetch_data(ticker, start_date, interval):
     data = yf.download(ticker, start=start_date, interval=interval)
     if data.empty:
         raise ValueError(f"{ticker}: No price data found for the given date range and interval.")
-    return data['Close']
+    return data['Adj Close']
 
 #Generates a random walk 
 def geometric_brownian_motion(S0, mu, sigma, T, dt, num_steps, end_datetime, interval):

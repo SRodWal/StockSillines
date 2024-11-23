@@ -37,7 +37,7 @@ class PDF(FPDF):
         
     def subsection_title(self, title):
         self.set_font('Arial', "", 8)
-        self.cell(0, 10, title, 0, 1, 'L')
+        self.cell(0, 10, title, 0, 1, 'L') 
         self.ln(0)
         
 

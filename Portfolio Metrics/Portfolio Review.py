@@ -18,7 +18,7 @@ from Volatility_and_Expected_Return import GBM_Simulation
 #from Interactive_Graph import int_candlestickgraph
 from Stock_Metrics import stock_metrics
 
-f_dir = r"D:/Professional_WorkTools/Github/RodWal-Portfolio/Open Positions.xlsx"
+f_dir = r"D:/Professional_WorkTools/Github/StockSillines/Open Positions.xlsx"
 
 class PDF(FPDF):
     def header(self):
@@ -111,10 +111,10 @@ def Selector(lst):
 
 # REad
 portfolio_df = pd.read_excel(f_dir)
-positiondate_df = portfolio_df.sort_values(by = ["Date"], ascending = False).drop_duplicates(subset = ["Ticket"])
-open_positions_df = portfolio_df[["Ticket","Value","Volume"]].groupby(["Ticket"]).sum()
+positiondate_df = portfolio_df.sort_values(by = ["Date"], ascending = False).drop_duplicates(subset = ["Ticker"])
+open_positions_df = portfolio_df[["Ticker","Value","Volume"]].groupby(["Ticker"]).sum()
 open_positions_df["Avg Price"] = open_positions_df["Value"]/open_positions_df["Volume"]
-open_positions_df = pd.merge(open_positions_df,positiondate_df[["Ticket","Date","Chapter"]], on = "Ticket")
+open_positions_df = pd.merge(open_positions_df,positiondate_df[["Ticker","Date","Chapter"]], on = "Ticker")
 
 
 current_date = datetime.now()
@@ -143,7 +143,7 @@ for chapter in selected_chapters:
     #Add Companies' financials
     for item in mini_open_positions_df.loc[:].index:
         position = open_positions_df.loc[item]   
-        ticker = position.Ticket #Stock Symbol
+        ticker = position.Ticker #Stock Symbol
         finance, metric, name = stock_metrics(ticker)
         financials.append(finance)
         metrics.append(metric)
@@ -168,7 +168,7 @@ for chapter in selected_chapters:
 
     for item in mini_open_positions_df.loc[:].index:
         position = open_positions_df.loc[item]    
-        ticker = position.Ticket #Stock Symbol
+        ticker = position.Ticker #Stock Symbol
         position_price = position["Avg Price"]
         pdf.add_page()
         pdf.section_title('Price Evolution for '+ticker+" - Open Position: "+str(position_price.round(2)))

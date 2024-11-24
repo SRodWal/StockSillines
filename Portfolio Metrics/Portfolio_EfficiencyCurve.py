@@ -60,8 +60,6 @@ weights = df['Value'].values / df['Value'].sum()  # Normalize initial weights
 start = '2023-01-01'
 end = '2024-12-31'
 
-
-
 def CorMatrix(df, start_date, end_date):
     tickers = list(df["Ticker"])
     attempts = 10
@@ -101,7 +99,9 @@ constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
 bounds = tuple((0, 1) for asset in range(len(tickers)))
 
 # Compute the efficient frontier
-risk_aversions = np.linspace(0, 1, 50)  # 50 points from 0 to 1
+x = np.linspace(-1, np.pi/2-0.0001, 200)
+# Calculate risk aversions using the specified formula
+risk_aversions = np.tan(x)
 frontier_returns = []
 frontier_volatilities = []
 frontier_weights = []
@@ -146,6 +146,51 @@ for i in range(len(frontier_returns)):
     hover_text = f"Volatility: {frontier_volatilities[i]:.2f}%<br>Return: {frontier_returns[i]:.2f}%<br>{weights_text}"
     hover_texts.append(hover_text)
 
+# Generate random portfolios to create the portfolio boundary
+num_portfolios = 100
+random_portfolio_returns = []
+random_portfolio_volatilities = []
+random_portfolio_hover_texts = []
+
+average_weights = []
+for _ in range(num_portfolios):
+    random_weights = np.random.random(len(tickers))
+    random_weights /= np.sum(random_weights)
+    portfolio_return = np.sum(random_weights * expected_returns)
+    portfolio_volatility = np.sqrt(random_weights.T @ cov_matrix @ random_weights)
+    random_portfolio_returns.append(portfolio_return)
+    random_portfolio_volatilities.append(portfolio_volatility)
+    
+    weights_text = "<br>".join([f"{tickers[j]}: {random_weights[j] * 100:.2f}%" for j in range(len(tickers))])
+    hover_text = f"Volatility: {portfolio_volatility*100:.2f}%<br>Return: {portfolio_return:.2f}%<br>{weights_text}"
+    random_portfolio_hover_texts.append(hover_text)
+
+# Convert to percentage format
+random_portfolio_returns = [x for x in random_portfolio_returns]
+random_portfolio_volatilities = [x*100 for x in random_portfolio_volatilities]
+
+# Determine ranges for returns and volatilities
+min_return, max_return = min(expected_returns), max(expected_returns)
+min_volatility, max_volatility = min(volatilities), max(volatilities)
+
+# Create grid points at intervals of 5%
+return_intervals = np.arange(round(min_return/5)*5, round(max_return/5)*5 + 5, 5)
+volatility_intervals = np.arange(round(min_volatility/5)*5, round(max_volatility/5)*5 + 5, 5)
+
+# Generate portfolio points within the grid ranges
+grid_portfolio_returns = []
+grid_portfolio_volatilities = []
+grid_portfolio_hover_texts = []
+
+for ret in return_intervals:
+    for vol in volatility_intervals:
+        closest_index = np.argmin(np.abs(np.array(frontier_returns) - ret) + np.abs(np.array(frontier_volatilities) - vol))
+        grid_portfolio_returns.append(frontier_returns[closest_index])
+        grid_portfolio_volatilities.append(frontier_volatilities[closest_index])
+        weights_text = "<br>".join([f"{tickers[j]}: {frontier_weights[closest_index][j] * 100:.2f}%" for j in range(len(tickers))])
+        hover_text = f"Volatility: {frontier_volatilities[closest_index]:.2f}%<br>Return: {frontier_returns[closest_index]:.2f}%<br>{weights_text}"
+        grid_portfolio_hover_texts.append(hover_text)
+
 # Plot the efficient frontier using Plotly
 fig = go.Figure()
 
@@ -176,6 +221,25 @@ fig.add_trace(go.Scatter(
     textposition='bottom center', marker=dict(size=12, color='red'),
     hovertemplate=f"Volatility: {current_portfolio_volatility:.2f}%<br>Return: {current_portfolio_return:.2f}%<br>{current_portfolio_hover}<extra></extra>"
 ))
+
+# Add the portfolio boundary
+fig.add_trace(go.Scatter(
+    x=random_portfolio_volatilities, y=random_portfolio_returns,
+    mode='markers', name='Portfolio Boundary',
+    marker=dict(size=3, color='blue', opacity=0.5),
+    text=random_portfolio_hover_texts,
+    hoverinfo='text'
+))
+
+# Add the portfolio grid
+fig.add_trace(go.Scatter(
+    x=grid_portfolio_volatilities, y=grid_portfolio_returns,
+    mode='markers', name='Portfolio Grid',
+    marker=dict(size=5, color='orange'),
+    text=grid_portfolio_hover_texts,
+    hoverinfo='text'
+))
+
 
 # Update layout with percentage format
 fig.update_layout(

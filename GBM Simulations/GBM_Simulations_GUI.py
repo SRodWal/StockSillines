@@ -96,11 +96,25 @@ class InputDialog(QDialog):
         self.accept()
 
 def fetch_data(ticker, start_date, interval):
-    #str_start_date = start_date.strftime("%Y-%m-%d")
+    # Fetch price data
     data = yf.download(ticker, start=start_date, interval=interval)
     if data.empty:
         raise ValueError(f"{ticker}: No price data found for the given date range and interval.")
-    return data['Adj Close']
+    
+    # Fetch ticker information
+    ticker_info = yf.Ticker(ticker).info
+    short_name = ticker_info.get('shortName', 'N/A')  # Get shortName, use 'N/A' if not available
+    
+    """
+    #Fetch earnings data
+    earnings_data = yf.Ticker(ticker).financials
+    if earnings_data.empty:
+        raise ValueError(f"{ticker}: No earnings data found for the given date range.")
+    #Calcula PE Ratio  
+    data['P/E Ratio'] = data['Adj Close'] / earnings_data['Earnings per Share']['ttm']
+    """
+
+    return data['Adj Close'], short_name,
 
 #Generates a random walk 
 def geometric_brownian_motion(S0, mu, sigma, T, dt, num_steps, end_datetime, interval):
@@ -254,7 +268,7 @@ def GBMS():
    
 
     # Fetch data
-    data = fetch_data(ticker, start_date, interval)
+    data, Name = fetch_data(ticker, start_date, interval)
     returns = data.pct_change().dropna()
     S0 = data.iloc[-1]
 
@@ -321,7 +335,7 @@ def GBMS():
     print(simulated_data)
 
     #HistData
-    Hist_data = fetch_data(ticker,plot_start_date,plot_interval)
+    Hist_data, _ = fetch_data(ticker,plot_start_date,plot_interval)
     
     # Plotting
     #plt.figure(figsize=(14, 8))
@@ -332,6 +346,8 @@ def GBMS():
     plt.ylabel('Price')
     plt.legend()
     plt.show()
+    
+
     
     # Plotting with Plotly
     fig = go.Figure()
@@ -350,7 +366,8 @@ def GBMS():
     fig.add_trace(go.Scatter(x=t, y=GBMS_dict['median'], mode='lines', name='Median', line=dict(color='black'), legendgroup = "Metrics"))
     fig.add_trace(go.Scatter(x=t, y=GBMS_dict['mean'], mode='lines', name='Mean', line=dict(color='purple'), legendgroup = "Metrics"))
 
-    fig.update_layout(title='GBM Simulations: Percentiles, Median, and Mean',
+    
+    fig.update_layout(title='GBMS - '+Name+": Annual Returns "+str(round(mu*yearly_factor*100,2))+"%, Monthly "+str(round(mu*monthly_factor*100,2))+"%; Annual Volatility "+str(round(sigma * np.sqrt(yearly_factor)*100,2))+"%. Monthly "+str(round(sigma * np.sqrt(monthly_factor)*100,2))+"%",
                       xaxis_title='Time',
                       yaxis_title='Price',
                       legend=dict(x=0, y=1.0),

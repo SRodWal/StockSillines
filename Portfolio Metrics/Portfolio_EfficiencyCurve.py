@@ -1,9 +1,14 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 from scipy.optimize import minimize
 import yfinance as yf
 import tkinter as tk
+import plotly.offline as pyo
+import time
+
+# Initialize Plotly in offline mode
+pyo.init_notebook_mode(connected=True)
 
 # Custom Modules
 def Selector(lst):
@@ -45,7 +50,6 @@ portfolio_df = portfolio_df[["Chapter", "Ticker", "Volume", "Price", "Expected R
 Selected_Chapters, risk_aversion = Selector(list(set(portfolio_df.Chapter)))
 df = portfolio_df.loc[portfolio_df.Chapter.isin(Selected_Chapters)].drop("Chapter", axis=1)
 
-
 # Extract necessary data
 tickers = df['Ticker'].values
 expected_returns = df['Expected Return QoQ%'].values
@@ -56,9 +60,22 @@ weights = df['Value'].values / df['Value'].sum()  # Normalize initial weights
 start = '2023-01-01'
 end = '2024-12-31'
 
+
+
 def CorMatrix(df, start_date, end_date):
     tickers = list(df["Ticker"])
-    info = yf.download(tickers, start=start_date, end=end_date)['Close']
+    attempts = 10
+    for attempt in range(attempts):
+        try:
+            info = yf.download(tickers, start=start_date, end=end_date)['Close']
+            if not info.empty:
+                break
+        except Exception as e:
+            print(f"Attempt {attempt+1} failed: {e}")
+            time.sleep(2)  # Wait for 2 seconds before retrying
+    else:
+        raise ValueError("Failed to fetch data from Yahoo Finance after multiple attempts.")
+    
     # Calculate daily returns
     returns = info.pct_change().dropna()
     # Calculate the correlation matrix
@@ -84,29 +101,95 @@ constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
 bounds = tuple((0, 1) for asset in range(len(tickers)))
 
 # Compute the efficient frontier
-risk_aversions = np.linspace(0, 1, 200)  # 50 points from 0 to 1
+risk_aversions = np.linspace(0, 1, 50)  # 50 points from 0 to 1
 frontier_returns = []
 frontier_volatilities = []
+frontier_weights = []
+sharpe_ratios = []
+
+# Risk-free rate (assuming a placeholder value; replace with actual risk-free rate)
+risk_free_rate = 0.01
 
 for risk_aversion in risk_aversions:
     opt_results = minimize(objective_function, weights, args=(cov_matrix, expected_returns, risk_aversion), method='SLSQP', bounds=bounds, constraints=constraints)
     optimal_weights = opt_results.x
     portfolio_return = np.sum(optimal_weights * expected_returns)
     portfolio_volatility = np.sqrt(optimal_weights.T @ cov_matrix @ optimal_weights)
+    sharpe_ratio = (portfolio_return - risk_free_rate) / portfolio_volatility
     frontier_returns.append(portfolio_return)
     frontier_volatilities.append(portfolio_volatility)
+    frontier_weights.append(optimal_weights)
+    sharpe_ratios.append(sharpe_ratio)
 
-# Plot the efficient frontier
-plt.figure(figsize=(10, 6))
-plt.plot(frontier_volatilities, frontier_returns, label='Efficient Frontier')
-plt.scatter(volatilities, expected_returns, c='red', marker='o', label='Individual Assets')
+# Find the optimal portfolio with the highest Sharpe Ratio
+optimal_index = np.argmax(sharpe_ratios)
+optimal_portfolio_return = frontier_returns[optimal_index]*100
+optimal_portfolio_volatility = frontier_volatilities[optimal_index]*100
+optimal_portfolio_weights = frontier_weights[optimal_index]
+optimal_portfolio_hover = "<br>".join([f"{tickers[j]}: {optimal_portfolio_weights[j] * 100:.2f}%" for j in range(len(tickers))])
 
-for i, txt in enumerate(tickers):
-    plt.annotate(txt, (volatilities[i], expected_returns[i]))
+# Convert to percentage format
+frontier_returns = [x * 100 for x in frontier_returns]
+frontier_volatilities = [x * 100 for x in frontier_volatilities]
+volatilities = [x * 100 for x in volatilities]
+expected_returns = [x * 100 for x in expected_returns]
 
-plt.title('Efficient Frontier')
-plt.xlabel('Volatility (Risk)')
-plt.ylabel('Expected Return')
-plt.legend()
-plt.grid(True)
-plt.show()
+# Calculate the current portfolio return and volatility
+current_portfolio_return = np.sum(weights * expected_returns) # Convert to percentage
+current_portfolio_volatility = np.sqrt(weights.T @ cov_matrix @ weights)*100  # Convert to percentage
+current_portfolio_hover = "<br>".join([f"{tickers[j]}: {weights[j] * 100:.2f}%" for j in range(len(tickers))])
+
+# Hover text for efficient frontier points
+hover_texts = []
+for i in range(len(frontier_returns)):
+    weights_text = "<br>".join([f"{tickers[j]}: {frontier_weights[i][j] * 100:.2f}%" for j in range(len(tickers))])
+    hover_text = f"Volatility: {frontier_volatilities[i]:.2f}%<br>Return: {frontier_returns[i]:.2f}%<br>{weights_text}"
+    hover_texts.append(hover_text)
+
+# Plot the efficient frontier using Plotly
+fig = go.Figure()
+
+# Add the efficient frontier line
+fig.add_trace(go.Scatter(
+    x=frontier_volatilities, y=frontier_returns, mode='lines+markers', name='Efficient Frontier',
+    hoverinfo='text', text=hover_texts
+))
+
+# Add scatter plot for individual assets
+fig.add_trace(go.Scatter(
+    x=volatilities, y=expected_returns, mode='markers+text', name='Individual Assets', text=tickers, textposition='top center',
+    hovertemplate='Volatility: %{x:.2f}%<br>Return: %{y:.2f}%<extra></extra>'
+))
+
+# Highlight the optimal portfolio with the highest Sharpe Ratio
+fig.add_trace(go.Scatter(
+    x=[optimal_portfolio_volatility], y=[optimal_portfolio_return],
+    mode='markers+text', name='Optimal Portfolio', text=["Optimal Portfolio"],
+    textposition='bottom center', marker=dict(size=12, color='green'),
+    hovertemplate=f"Volatility: {optimal_portfolio_volatility:.2f}%<br>Return: {optimal_portfolio_return:.2f}%<br>{optimal_portfolio_hover}<extra></extra>"
+))
+
+# Highlight the current portfolio
+fig.add_trace(go.Scatter(
+    x=[current_portfolio_volatility], y=[current_portfolio_return],
+    mode='markers+text', name='Current Portfolio', text=["Current Portfolio"],
+    textposition='bottom center', marker=dict(size=12, color='red'),
+    hovertemplate=f"Volatility: {current_portfolio_volatility:.2f}%<br>Return: {current_portfolio_return:.2f}%<br>{current_portfolio_hover}<extra></extra>"
+))
+
+# Update layout with percentage format
+fig.update_layout(
+    title='Efficient Frontier',
+    xaxis_title='Volatility (Risk) [%]',
+    yaxis_title='Expected Return [%]',
+    legend_title='Legend',
+    template='plotly_white',
+    xaxis_tickformat='.2f',
+    yaxis_tickformat='.2f'
+)
+
+# Show the plot
+fig.show()
+
+# Optionally save the plot as an HTML file
+fig.write_html("efficient_frontier.html")

@@ -1,5 +1,5 @@
 # Import Custom Modules
-from GBM_Simulations_GUI import GBMS, price_probability
+from GBM_Simulations import GBMS, InputDialog, price_probability
 from FinalPrice_DisFitting import Dist_Fitting, plot_probability_evolution
 import plotly.io as pio
 import pandas as pd
@@ -42,17 +42,12 @@ def Selector(lst):
     
     return selected_items, risk_aversion
 
-# Read data from Excel
-f_dir = r"D:/Professional_WorkTools/Github/StockSillines/Open Positions.xlsx"
-portfolio_df = pd.read_excel(f_dir)
-portfolio_df = portfolio_df[["Chapter", "Ticker", "Volume", "Price", "Expected Return QoQ%", "Volatility", "Value","Target Price"]]
-Selected_Chapters, risk_aversion = Selector(list(set(portfolio_df.Chapter)))
-df = portfolio_df.loc[portfolio_df.Chapter.isin(Selected_Chapters)].drop("Chapter", axis=1)
+
 
 # Define the main function to generate the dashboard
-def generate_dashboard(price_target):
+def generate_dashboard(price_target,ticker,interval,plot_interval,T,start_date,plot_start_date):
     # Fetch and Simulate Data
-    r_mon, v_mon, r_yr, v_yr, df_simulations, fig = GBMS()
+    r_mon, v_mon, r_yr, v_yr, df_simulations, fig = GBMS(ticker,interval,plot_interval,T,start_date,plot_start_date)
     KPIs = {"Annual Return" : r_yr, "Annual Volatility" : v_yr, "Monthly Return" : r_mon, "Monthly Volatility" : v_mon}
 
     # Generate Distribution Fitting Plot
@@ -65,8 +60,41 @@ def generate_dashboard(price_target):
     return fig, fig_dist, fig_evo, KPIs
 # Check if the script is run directly
 if __name__ == "__main__":
-    #app = QApplication(sys.argv)  # Initialize the QApplication
-    generate_dashboard(80)
+    
+    #Read Excel Data
+    f_dir = r"D:/Professional_WorkTools/Github/StockSillines/Open Positions.xlsx"
+    portfolio_df = pd.read_excel(f_dir)
+    portfolio_df = portfolio_df[["Chapter", "Ticker", "Volume", "Price", "Expected Return QoQ%", "Volatility", "Value","Target Price"]]
+    
+    app = QApplication(sys.argv)
+    dialog = InputDialog(list(set(portfolio_df.Chapter)))
+    if dialog.exec() == QDialog.Accepted:
+        # Access input parameters after the dialog is accepted
+        selected_chapters = dialog.chapters
+        interval = dialog.interval
+        plot_interval = dialog.plot_interval
+        T = dialog.sim_length
+        start_date = dialog.start_date
+        plot_start_date = dialog.plot_start_date
+            
+        print(f'Chapters: {selected_chapters}')
+        print(f'Interval: {interval}')
+        print(f'Plot Interval: {plot_interval}')
+        print(f'Simulation Length (days): {T}')
+        print(f'Start Date: {start_date}')
+        print(f'Plot Start Date: {plot_start_date}')
+
+    #Filter Selected Chapters
+    df = portfolio_df.loc[portfolio_df.Chapter.isin(selected_chapters)]    
+    
+    for chapter in selected_chapters:
+        tickers = df.loc[df.Chapter == chapter].Ticker
+        price_targets = df.loc[df.Chapter == chapter]["Target Price"]
+        for ticker, price_target in zip(tickers,price_targets):
+            print("Ticker:"+ticker)
+            generate_dashboard(price_target,ticker,interval,plot_interval,T,start_date,plot_start_date)
+
+    
     #print("Expected Parameters:")
     #print(pd.DataFrame({"Monthly Return": r_mon, "Montly Volatility:" : v_mon,"Annual Return" : r_yr, "Annual Volatility": v_yr}))
     #sys.exit(app.exec_())  # Start the event loop for the GUI

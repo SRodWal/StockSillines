@@ -336,7 +336,7 @@ def GBMS(ticker,interval,plot_interval,T,start_date,plot_start_date):
 
     
 
-    print(simulated_data)
+    #print(simulated_data)
 
     #HistData
     Hist_data, _ = fetch_data(ticker,plot_start_date,plot_interval)
@@ -380,7 +380,7 @@ def GBMS(ticker,interval,plot_interval,T,start_date,plot_start_date):
                       height=800)
 
     # Save plot to HTML
-    pio.write_html(fig, file='GBM_simulations_plot.html', auto_open=True)
+    #pio.write_html(fig, file='GBM_simulations_plot.html', auto_open=True)
     return mu*monthly_factor,mu*yearly_factor, sigma * np.sqrt(monthly_factor),sigma * np.sqrt(yearly_factor),GBMS_dict["df_simulations"],fig
     
 """

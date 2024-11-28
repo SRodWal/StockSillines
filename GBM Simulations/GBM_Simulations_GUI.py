@@ -163,6 +163,7 @@ def simulate_once(S0, mu, sigma, T, dt, num_steps, end_datetime, interval):
     return S
 
 def GMB_Simulations(S0, mu, sigma, T, dt, NSimulations, end_datetime, interval):
+    """ Simulate multiple GBM paths """
     num_steps = int(T / dt)
     timestamps, _ = geometric_brownian_motion(S0, mu, sigma, T, dt, num_steps, end_datetime, interval)
     
@@ -183,7 +184,6 @@ def GMB_Simulations(S0, mu, sigma, T, dt, NSimulations, end_datetime, interval):
     percentiles_95 = df_simulations.apply(lambda x: np.percentile(x, 95), axis=0)
     median = df_simulations.median(axis=0)
     mean = df_simulations.mean(axis=0)
-
 
     return {
         'percentiles_5': percentiles_5,
@@ -379,7 +379,6 @@ def GBMS():
     pio.write_html(fig, file='GBM_simulations_plot.html', auto_open=True)
     return mu*monthly_factor,mu*yearly_factor, sigma * np.sqrt(monthly_factor),sigma * np.sqrt(yearly_factor),GBMS_dict["df_simulations"],fig
 
-#if __name__ == '__main__':
-       #r_mon, v_mon, r_yr, v_yr, df_simulations = main()
+
 
 

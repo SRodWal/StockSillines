@@ -54,12 +54,12 @@ def generate_dashboard(price_target, ticker, interval, plot_interval, T, start_d
     KPIs = {"Annual Return": r_yr, "Annual Volatility": v_yr, "Monthly Return": r_mon, "Monthly Volatility": v_mon}
 
     # Generate Distribution Fitting Plot
-    fig_dist = Dist_Fitting(df_simulations, 3, ticker)
-    pio.write_html(fig_dist, file=f'{ticker}_final_prices_histogram.html', auto_open=False)
+    fig_dist = Dist_Fitting(df_simulations, 5, ticker)
+    #pio.write_html(fig_dist, file=f'{ticker}_final_prices_histogram.html', auto_open=False)
 
     # Generate Probability Evolution Plot
     fig_evo = plot_probability_evolution(df_simulations, price_target=price_target, tolerance=0.05 * price_target)
-    pio.write_html(fig_evo, file=f'{ticker}_Price_Evolution.html', auto_open=False)
+    #pio.write_html(fig_evo, file=f'{ticker}_Price_Evolution.html', auto_open=False)
 
     return fig, fig_dist, fig_evo, KPIs
 """
@@ -107,7 +107,16 @@ def guardar_graficas_html(html_filename, df, tickers_info, figs_dict):
 
     # Reorder columns to place 'Nombre Ticker' first
     df = df[['Nombre Ticker'] + [col for col in df.columns if col != 'Nombre Ticker']]
+    
+    # Function to format numerical values as percentages
+    def format_percentage(x):
+        if isinstance(x, (int, float)):
+            return f"{x * 100:.2f}%"
+        return x
 
+    # Apply formatting to the DataFrame
+    df = df.applymap(format_percentage)
+    
     # Convert dataframe to HTML
     with open(html_filename, 'w', encoding='utf-8') as f:
         f.write("<h1 id='top'>Geometric Brownian Motion Portfolio Simulation</h1>\n")
@@ -118,6 +127,7 @@ def guardar_graficas_html(html_filename, df, tickers_info, figs_dict):
         f.write("</ul>\n\n")
 
         f.write("<h2>Expected Returns and Volatilities</h2>\n")
+        f.write("<div style='display: flex; flex-direction: column; align-items: center;'>\n")
         f.write(df.to_html(index=False))  # Convert DataFrame to HTML
         f.write("</div>\n")
 
@@ -126,14 +136,16 @@ def guardar_graficas_html(html_filename, df, tickers_info, figs_dict):
             f.write(f'<a id="{ticker}"></a>\n')
             f.write(f'<h2>{ticker} - {short_name}</h2>\n')
             f.write("<div style='display: flex; flex-direction: column; align-items: center;'>\n")
-            f.write("<div style='margin-bottom: 20px;'>\n")
+            #f.write("<div style='margin-bottom: 5px;'>\n")
             f.write(figures[0].to_html(full_html=False, include_plotlyjs='cdn'))
             f.write("</div>\n")
-            f.write("<div style='display: flex; justify-content: center;'>\n")
-            f.write("<div style='margin-right: 20px;'>\n")
+            #f.write("<div style='display: flex; justify-content: center;'>\n")
+            #f.write("<div style='margin-right: 20px;'>\n")
+            f.write("<div style='display: flex; flex-direction: column; align-items: center;'>\n")
             f.write(figures[1].to_html(full_html=False, include_plotlyjs='cdn'))
             f.write("</div>\n")
-            f.write("<div>\n")
+            f.write("</div>\n")
+            f.write("<div style='display: flex; flex-direction: column; align-items: center;'>\n")
             f.write(figures[2].to_html(full_html=False, include_plotlyjs='cdn'))
             f.write("</div>\n")
             f.write("</div>\n")
@@ -190,4 +202,4 @@ if __name__ == "__main__":
         kpi_df = pd.DataFrame(kpis)
 
         # Generate HTML report
-        guardar_graficas_html("Financial_Report.html", kpi_df, tickers_info, figs_dict)
+        guardar_graficas_html("GBMS_Report.html", kpi_df, tickers_info, figs_dict)

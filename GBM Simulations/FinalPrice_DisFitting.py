@@ -206,7 +206,7 @@ def plot_probability_evolution(df_simulations, price_target, tolerance):
     fig.update_layout(layout)
     
     # Show the figure
-    fig.show()
+    #fig.show()
     return fig
 
 # Example usage

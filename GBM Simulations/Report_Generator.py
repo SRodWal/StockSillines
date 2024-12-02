@@ -202,4 +202,4 @@ if __name__ == "__main__":
         kpi_df = pd.DataFrame(kpis)
 
         # Generate HTML report
-        guardar_graficas_html("GBMS_Report.html", kpi_df, tickers_info, figs_dict)
+        guardar_graficas_html("GBMS_Report_3M.html", kpi_df, tickers_info, figs_dict)

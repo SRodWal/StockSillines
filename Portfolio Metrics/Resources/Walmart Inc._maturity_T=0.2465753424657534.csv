@@ -1,9 +1,9 @@
 Price Description,Forward Price,Profit Margin (%)
-5th percentile,90.45,4.26
-25th percentile,98.22,11.83
-45th percentile,102.9,15.84
-50th percentile,104.01,16.74
-65th percentile,107.48,19.43
-75th percentile,110.17,21.39
-95th percentile,119.69,27.65
-Close Price,90.44,4.25
+5th percentile,93.9,7.77
+25th percentile,102.03,15.12
+45th percentile,106.88,18.97
+50th percentile,108.05,19.85
+65th percentile,111.69,22.46
+75th percentile,114.47,24.35
+95th percentile,124.24,30.3
+Close Price,92.64,6.52

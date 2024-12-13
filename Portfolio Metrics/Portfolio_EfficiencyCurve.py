@@ -45,6 +45,7 @@ def Selector(lst):
 
 # Read data from Excel
 f_dir = r"D:/Professional_WorkTools/Github/StockSillines/Portfolio Expected Returns.xlsx"
+f_dir = r"D:/Professional_WorkTools/Github/StockSillines/Open Positions.xlsx"
 portfolio_df = pd.read_excel(f_dir)
 portfolio_df = portfolio_df[["Chapter", "Ticker", "Volume", "Price", "Expected Return QoQ%", "Volatility", "Value"]]
 Selected_Chapters, risk_aversion = Selector(list(set(portfolio_df.Chapter)))
@@ -256,4 +257,4 @@ fig.update_layout(
 fig.show()
 
 # Optionally save the plot as an HTML file
-fig.write_html("efficient_frontier.html")
+fig.write_html("efficient_frontier_OP.html")

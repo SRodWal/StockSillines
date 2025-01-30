@@ -257,4 +257,4 @@ fig.update_layout(
 fig.show()
 
 # Optionally save the plot as an HTML file
-fig.write_html("efficient_frontier_OP.html")
+fig.write_html("efficient_frontier_OP_Energy.html")

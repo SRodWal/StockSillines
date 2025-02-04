@@ -184,7 +184,7 @@ for chapter in selected_chapters:
                 
                 start_plotdate = current_date - timedelta(days = pdays)
                 start_plotdate = end_date-timedelta(days = vdays) if start_plotdate >= end_date else start_plotdate
-                start_date = start_date - timedelta(days = vdays) if abs((end_date - start_date).days)<7*4 else start_date
+                start_date = start_date - timedelta(days = vdays) if ((end_date - start_date).days)<7*4 else start_date
                 end_dateplot = current_date + timedelta(days = 1)
             
                 projection_img, distribution_img, maturity_csv = GBM_Simulation(ticker,start_date,end_date,start_plotdate,end_dateplot,simulations,adjusted_return,position_price,t,open_position_view,PP)
@@ -211,5 +211,5 @@ for chapter in selected_chapters:
             pdf.add_table(table)
             
 
-pdf.output('pricing_report2.pdf')     
+pdf.output('pricing_report_WK06.pdf')     
 

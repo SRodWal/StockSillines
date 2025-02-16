@@ -211,5 +211,5 @@ for chapter in selected_chapters:
             pdf.add_table(table)
             
 
-pdf.output('pricing_report_WK06.pdf')     
+pdf.output('pricing_report_WK07.pdf')     
 

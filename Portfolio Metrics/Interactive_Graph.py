@@ -3,18 +3,18 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import datetime as dt
 import pandas as pd
+from sklearn.cluster import KMeans
+import numpy as np
 
 # Define the start date for fetching historical data
-start_date = dt.datetime(2024, 1, 1)
+start_date = dt.datetime(2025, 1, 1)
 
 # Define the stock symbols
 symbol_list = ["TSM", "AEP", "MSFT", "PEP", "WMT", "NEE", "QCOM"]
+interval = "1d"
 
-def plot_candlestick_pe_ratio_volume_chart(symbol, start_date):
-    # Fetch historical data
-    ticker = yf.Ticker(symbol)
-    name = ticker.info["longName"]
-    data = ticker.history(start=start_date, interval="1wk")
+def calculate_pe_ratio(ticker, interval, start_date):
+    data = ticker.history(start=start_date, interval=interval)
     
     # Fetch quarterly earnings data
     quarterly_earnings = ticker.quarterly_earnings
@@ -38,30 +38,50 @@ def plot_candlestick_pe_ratio_volume_chart(symbol, start_date):
         pe_data = pd.DataFrame(data['Close'])
         pe_data['P/E Ratio'] = data['Close'] / ticker.info['epsTrailingTwelveMonths']
     
+    return pe_data
+
+def calculate_ad_line(df):
+    """Calculate the Accumulation/Distribution Line (A/D Line)."""
+    ad_line = []
+    ad_val = 0
+    for i in range(len(df)):
+        clv = ((df['Close'][i] - df['Low'][i]) - (df['High'][i] - df['Close'][i])) / (df['High'][i] - df['Low'][i])
+        ad_val += clv * df['Volume'][i]
+        ad_line.append(ad_val)
+    return ad_line
+
+def cluster_analysis(data):
+    """Perform K-Means clustering on volumes and traded prices."""
+    # Prepare the data for clustering
+    clustering_data = data[['Close', 'Volume']]
+    clustering_data = clustering_data.dropna()
+    
+    # Normalize the data
+    clustering_data_normalized = (clustering_data - clustering_data.mean()) / clustering_data.std()
+    
+    # Perform K-Means clustering
+    kmeans = KMeans(n_clusters=4)  # You can adjust the number of clusters
+    kmeans.fit(clustering_data_normalized)
+    
+    # Add cluster labels to the data
+    clustering_data['Cluster'] = kmeans.labels_
+    
+    return clustering_data
+
+def plot_candlestick_pe_ratio_volume_chart(symbol, start_date, interval):
+    # Fetch historical data
+    ticker = yf.Ticker(symbol)
+    name = ticker.info["longName"]
+    data = ticker.history(start=start_date, interval=interval)
+    
+    # Perform cluster analysis
+    clustering_data = cluster_analysis(data)
+    
     # Calculate Accumulation/Distribution Line (A/D Line)
-    def accumulation_distribution_line(df):
-        ad_line = []
-        ad_val = 0
-        for i in range(len(df)):
-            clv = ((df['Close'][i] - df['Low'][i]) - (df['High'][i] - df['Close'][i])) / (df['High'][i] - df['Low'][i])
-            ad_val += clv * df['Volume'][i]
-            ad_line.append(ad_val)
-        return ad_line
+    data['A/D Line'] = calculate_ad_line(data)
     
-    data['A/D Line'] = accumulation_distribution_line(data)
-    
-    # Fetch financial data (TTM, last 5 years revenues and CFO)
-    financials = ticker.financials.T
-    cashflow = ticker.cashflow.T
-    FCF_name = cashflow.columns[0]
-    FCF_YoY = FCF_name+" YoY%"
-    
-    # Calculate YoY growth for revenues and CFO
-    financials['Revenue YoY Growth'] = financials['Total Revenue'].pct_change()
-    cashflow[FCF_YoY] = cashflow[FCF_name].pct_change()
-    
-    # Create the figure with five subplots (candlestick, P/E ratio, volume distribution, A/D Line, financials)
-    fig = make_subplots(rows=4, cols=1, shared_xaxes=True, vertical_spacing=0.05, subplot_titles=(f'{name} Stock Price', 'P/E Ratio', 'Volume vs. Traded Price', 'Accumulation/Distribution Line', 'Financials (TTM, Revenue, FCF, YoY Growth)'))
+    # Create the figure with five subplots (candlestick, P/E ratio, volume distribution, A/D Line, clusters)
+    fig = make_subplots(rows=5, cols=1, shared_xaxes=True, vertical_spacing=0.05, subplot_titles=(f'{name} Stock Price', 'P/E Ratio', 'Volume vs. Traded Price', 'Accumulation/Distribution Line', 'Clusters'))
     
     # Add candlestick chart (subplot 1)
     fig.add_trace(go.Candlestick(x=data.index,
@@ -70,33 +90,66 @@ def plot_candlestick_pe_ratio_volume_chart(symbol, start_date):
                                  low=data['Low'],
                                  close=data['Close'],
                                  name='Price'), row=1, col=1)
-
+    
+    # Calculate P/E ratio
+    pe_data = calculate_pe_ratio(ticker, interval, start_date)
     # Add P/E ratio area chart (subplot 2)
     fig.add_trace(go.Scatter(x=pe_data.index, y=pe_data['P/E Ratio'], mode='lines', line=dict(color='blue'), name='P/E Ratio'), row=2, col=1)
 
     # Add volume vs. traded price distribution (subplot 3)
-    fig.add_trace(go.Histogram(x=data['Close'], y=data['Volume'], histfunc='sum', nbinsx=50, name='Volume Distribution', marker=dict(color='orange')), row=3, col=1)
+    fig.add_trace(go.Histogram(x=data['Close'], y=data['Volume'], histfunc='sum', nbinsx=25, name='Volume Distribution', marker=dict(color='orange')), row=3, col=1)
 
     # Add A/D Line (subplot 4)
     fig.add_trace(go.Scatter(x=data.index, y=data['A/D Line'], mode='lines', line=dict(color='green'), name='A/D Line'), row=4, col=1)
-
-    ## Add financials (TTM, Revenue, CFO, YoY Growth) chart (subplot 5)
-    #fig.add_trace(go.Bar(x=financials.index, y=financials['Total Revenue'], name='Total Revenue'), row=5, col=1)
-    #fig.add_trace(go.Bar(x=cashflow.index, y=cashflow[FCF_name], name='FCF'), row=5, col=1)
-    #fig.add_trace(go.Scatter(x=financials.index, y=financials['Revenue YoY Growth'], mode='lines+markers', line=dict(color='blue'), name='Revenue YoY Growth',yaxis = "y2"), row=5, col=1)
-    #fig.add_trace(go.Scatter(x=cashflow.index, y=cashflow[FCF_YoY], mode='lines+markers', line=dict(color='green'), name='FCF YoY Growth', yaxis = "y2"), row=5, col=1)
+    
+    # Add clustering results (subplot 5)
+    for cluster_id in sorted(clustering_data['Cluster'].unique()):
+        cluster_trace = go.Scatter(
+            x=clustering_data[clustering_data['Cluster'] == cluster_id]['Close'],
+            y=clustering_data[clustering_data['Cluster'] == cluster_id]['Volume'],
+            mode='markers',
+            marker=dict(color=cluster_id, colorscale='Viridis'),
+            name=f'Cluster {cluster_id}'
+        )
+        fig.add_trace(cluster_trace, row=5, col=1)
+    
+    # Add dropdown filter for clusters
+    cluster_buttons = [
+        dict(
+            method="update",
+            label=f"Cluster {cluster_id}",
+            args=[
+                {"visible": [True] * 4 + [cluster_id == cid for cid in clustering_data['Cluster'].unique()]},
+                {"title": f"Cluster {cluster_id} of {name}"}
+            ]
+        ) for cluster_id in sorted(clustering_data['Cluster'].unique())
+    ]
+    cluster_buttons.append(
+        dict(
+            method="update",
+            label="All Clusters",
+            args=[
+                {"visible": [True] * len(fig.data)},
+                {"title": f"All Clusters of {name}"}
+            ]
+        )
+    )
+    fig.update_layout(
+        updatemenus=[dict(
+            buttons=cluster_buttons,
+            direction="down",
+            showactive=True
+        )]
+    )
     
     # Customize layout with zoom, pan, and sliders
     fig.update_layout(
-        title=f'{name} Stock Price, P/E Ratio, Volume Distribution, A/D Line, and Financials',
+        title=f'{name} Stock Price, Volume Distribution, A/D Line, and Clusters',
         xaxis_title='Date',
         yaxis_title='Price',
         template='plotly_dark',
-        xaxis_rangeslider_visible=False,
         xaxis=dict(
-            rangeslider=dict(
-                visible=False  # Show the range slider
-            ),
+            rangeslider=dict(visible=False),  # Hide the range slider
             rangeselector=dict(
                 buttons=list([
                     dict(count=1, label="1m", step="month", stepmode="backward"),
@@ -109,17 +162,15 @@ def plot_candlestick_pe_ratio_volume_chart(symbol, start_date):
             ),
             fixedrange=False  # Enable zooming and panning on X-axis
         ),
-        yaxis=dict(
-            autorange=True  # Enable auto-scaling on Y-axis
-        ),
+        yaxis=dict(autorange=True)  # Enable auto-scaling on Y-axis
     )
-    
     fig.update_yaxes(title_text='P/E Ratio', row=2, col=1, autorange=True)
     fig.update_yaxes(title_text='Volume', row=3, col=1, autorange=True)
     fig.update_yaxes(title_text='A/D Line', row=4, col=1, autorange=True)
-    #fig.update_yaxes(title_text='Financials', row=5, col=1, autorange=True)
+    fig.update_yaxes(title_text='Clusters', row=5, col=1, autorange=True)
     
     # Show the chart
     fig.show()
-    fig.write_html(name + "_stock_prices_pe_ratio_volume_ad_financials.html")
+    fig.write_html(f"{name}_stock_prices_clusters.html")
+
 

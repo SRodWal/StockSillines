@@ -7,11 +7,11 @@ from sklearn.cluster import KMeans
 import numpy as np
 
 # Define the start date for fetching historical data
-start_date = dt.datetime(2024, 11, 1)
+start_date = dt.datetime(2022, 1, 1)
 
 # Define the stock symbols
 symbol_list = ["TSM", "AEP", "MSFT", "PEP", "WMT", "NEE", "QCOM"]
-interval = "1d"
+interval = "1wk"
 
 def calculate_pe_ratio(ticker, interval, start_date):
     data = ticker.history(start=start_date, interval=interval)

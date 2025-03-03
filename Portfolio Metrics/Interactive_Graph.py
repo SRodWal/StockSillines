@@ -7,11 +7,11 @@ from sklearn.cluster import KMeans
 import numpy as np
 
 # Define the start date for fetching historical data
-start_date = dt.datetime(2025, 1, 1)
+start_date = dt.datetime(2024, 1, 1)
 
 # Define the stock symbols
 symbol_list = ["TSM", "AEP", "MSFT", "PEP", "WMT", "NEE", "QCOM"]
-interval = "1d"
+interval = "1wk"
 
 def calculate_pe_ratio(ticker, interval, start_date):
     data = ticker.history(start=start_date, interval=interval)
@@ -65,6 +65,7 @@ def cluster_analysis(data):
     
     # Add cluster labels to the data
     clustering_data['Cluster'] = kmeans.labels_
+    clustering_data['Date'] = clustering_data.index
     
     return clustering_data
 
@@ -102,12 +103,13 @@ def plot_candlestick_pe_ratio_volume_chart(symbol, start_date, interval):
     # Add A/D Line (subplot 4)
     fig.add_trace(go.Scatter(x=data.index, y=data['A/D Line'], mode='lines', line=dict(color='green'), name='A/D Line'), row=4, col=1)
     
-    # Add clustering results (subplot 5)
+    # Add clustering results with dates (subplot 5)
     for cluster_id in sorted(clustering_data['Cluster'].unique()):
         cluster_trace = go.Scatter(
             x=clustering_data[clustering_data['Cluster'] == cluster_id]['Close'],
             y=clustering_data[clustering_data['Cluster'] == cluster_id]['Volume'],
             mode='markers',
+            text=clustering_data[clustering_data['Cluster'] == cluster_id]['Date'],  # Adding dates as text labels
             marker=dict(color=cluster_id, colorscale='Viridis'),
             name=f'Cluster {cluster_id}'
         )
@@ -172,5 +174,4 @@ def plot_candlestick_pe_ratio_volume_chart(symbol, start_date, interval):
     # Show the chart
     fig.show()
     fig.write_html(f"{name}_stock_prices_clusters.html")
-
 

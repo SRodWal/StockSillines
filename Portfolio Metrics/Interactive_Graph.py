@@ -7,11 +7,11 @@ from sklearn.cluster import KMeans
 import numpy as np
 
 # Define the start date for fetching historical data
-start_date = dt.datetime(2024, 1, 1)
+start_date = dt.datetime(2024, 11, 1)
 
 # Define the stock symbols
 symbol_list = ["TSM", "AEP", "MSFT", "PEP", "WMT", "NEE", "QCOM"]
-interval = "1wk"
+interval = "1d"
 
 def calculate_pe_ratio(ticker, interval, start_date):
     data = ticker.history(start=start_date, interval=interval)
@@ -106,10 +106,10 @@ def plot_candlestick_pe_ratio_volume_chart(symbol, start_date, interval):
     # Add clustering results with dates (subplot 5)
     for cluster_id in sorted(clustering_data['Cluster'].unique()):
         cluster_trace = go.Scatter(
-            x=clustering_data[clustering_data['Cluster'] == cluster_id]['Close'],
+            x=clustering_data[clustering_data['Cluster'] == cluster_id]['Date'],
             y=clustering_data[clustering_data['Cluster'] == cluster_id]['Volume'],
             mode='markers',
-            text=clustering_data[clustering_data['Cluster'] == cluster_id]['Date'],  # Adding dates as text labels
+            text=clustering_data[clustering_data['Cluster'] == cluster_id]['Close'],  # Adding traded prices as text labels
             marker=dict(color=cluster_id, colorscale='Viridis'),
             name=f'Cluster {cluster_id}'
         )
@@ -146,7 +146,7 @@ def plot_candlestick_pe_ratio_volume_chart(symbol, start_date, interval):
     
     # Customize layout with zoom, pan, and sliders
     fig.update_layout(
-        title=f'{name} Stock Price, Volume Distribution, A/D Line, and Clusters',
+        title=f'{name} Stock Price, P/E Ratio, Volume Distribution, A/D Line, and Clusters',
         xaxis_title='Date',
         yaxis_title='Price',
         template='plotly_dark',
@@ -174,4 +174,3 @@ def plot_candlestick_pe_ratio_volume_chart(symbol, start_date, interval):
     # Show the chart
     fig.show()
     fig.write_html(f"{name}_stock_prices_clusters.html")
-

@@ -118,7 +118,7 @@ def fetch_data(ticker, start_date, interval):
     data['P/E Ratio'] = data['Adj Close'] / earnings_data['Earnings per Share']['ttm']
     """
 
-    return data['Adj Close'], short_name,
+    return data['Close'], short_name,
 
 #Generates a random walk 
 def geometric_brownian_motion(S0, mu, sigma, T, dt, num_steps, end_datetime, interval):

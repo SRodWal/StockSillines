@@ -4,15 +4,16 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import sys
-from PyQt5.QtWidgets import QApplication, QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QCalendarWidget
+from PyQt5.QtWidgets import QApplication, QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QCalendarWidget, QListWidget, QListWidgetItem
 from PyQt5.QtCore import QDate
 import plotly.graph_objs as go
 import plotly.io as pio
 from scipy import stats
 from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import Pool
 
 class InputDialog(QDialog):
-    def __init__(self):
+    def __init__(self, chapters):
         super().__init__()
         self.setWindowTitle('Input Dialog')
         self.setGeometry(100, 100, 400, 300)
@@ -22,11 +23,15 @@ class InputDialog(QDialog):
 
         layout = QVBoxLayout()
 
-        # Ticker Symbol
-        self.ticker_label = QLabel('Enter the ticker symbol:')
-        self.ticker_input = QLineEdit()
-        layout.addWidget(self.ticker_label)
-        layout.addWidget(self.ticker_input)
+        # Chapter Selection
+        self.chapter_label = QLabel('Select the chapters:')
+        self.chapter_list = QListWidget()
+        self.chapter_list.setSelectionMode(QListWidget.MultiSelection)
+        for chapter in chapters:
+            item = QListWidgetItem(chapter)
+            self.chapter_list.addItem(item)
+        layout.addWidget(self.chapter_label)
+        layout.addWidget(self.chapter_list)
 
         # Interval Selection
         self.interval_label = QLabel('Enter the interval (5m, 15m, 1h, 1d):')
@@ -86,7 +91,7 @@ class InputDialog(QDialog):
             self.plot_start_date_calendar.setMinimumDate(QDate.currentDate().addDays(-max_days))
 
     def submit(self):
-        self.ticker = self.ticker_input.text()
+        self.chapters = [item.text() for item in self.chapter_list.selectedItems()]
         self.interval = self.interval_combo.currentText()
         self.plot_interval = self.plot_interval_combo.currentText()
         self.sim_length = float(self.sim_length_input.text())
@@ -97,7 +102,7 @@ class InputDialog(QDialog):
 
 def fetch_data(ticker, start_date, interval):
     # Fetch price data
-    data = yf.download(ticker, start=start_date, interval=interval)
+    data = yf.download(ticker, start=start_date, interval=interval, auto_adjust=False)
     if data.empty:
         raise ValueError(f"{ticker}: No price data found for the given date range and interval.")
     
@@ -114,7 +119,7 @@ def fetch_data(ticker, start_date, interval):
     data['P/E Ratio'] = data['Adj Close'] / earnings_data['Earnings per Share']['ttm']
     """
 
-    return data['Adj Close'], short_name,
+    return data['Close'], short_name,
 
 #Generates a random walk 
 def geometric_brownian_motion(S0, mu, sigma, T, dt, num_steps, end_datetime, interval):
@@ -125,8 +130,12 @@ def geometric_brownian_motion(S0, mu, sigma, T, dt, num_steps, end_datetime, int
     S = S0 * np.exp(X)
     
     timestamps = generate_timestamps(end_datetime, num_steps, interval)
-    if len(timestamps)<len(S):
+    
+    # Ensure timestamps align with the length of S
+    if len(timestamps) < len(S):
         S = S[:len(timestamps)]
+    elif len(timestamps) > len(S):
+        timestamps = timestamps[:len(S)]
     
     return timestamps, S
 
@@ -163,18 +172,33 @@ def simulate_once(S0, mu, sigma, T, dt, num_steps, end_datetime, interval):
     return S
 
 def GMB_Simulations(S0, mu, sigma, T, dt, NSimulations, end_datetime, interval):
-    """ Simulate multiple GBM paths """
     num_steps = int(T / dt)
     timestamps, _ = geometric_brownian_motion(S0, mu, sigma, T, dt, num_steps, end_datetime, interval)
     
-    # Use ProcessPoolExecutor for parallel simulation
-    with ProcessPoolExecutor() as executor:
-        all_simulations = list(executor.map(simulate_once, [S0]*NSimulations, [mu]*NSimulations,
-                                            [sigma]*NSimulations, [T]*NSimulations, [dt]*NSimulations,
-                                            [num_steps]*NSimulations, [end_datetime]*NSimulations, [interval]*NSimulations))
+    #Use ProcessPoolExecutor for parallel simulation
+    #with ProcessPoolExecutor() as executor:
+    #    all_simulations = list(executor.map(simulate_once, [S0] * NSimulations, [mu] * NSimulations,[sigma] * NSimulations, [T] * NSimulations, [dt] * NSimulations,[num_steps] * NSimulations, [end_datetime] * NSimulations, [interval] * NSimulations))
+    #Use Multiprocessing
+    #with Pool() as pool:
+    #   all_simulations = pool.starmap(simulate_once, 
+    #                                  [(S0, mu, sigma, T, dt, num_steps, end_datetime, interval)] * NSimulations)
     
     # Convert to DataFrame for easier manipulation and calculation
-    df_simulations = pd.DataFrame(all_simulations, columns=timestamps)
+    #df_simulations = pd.DataFrame(all_simulations)
+    
+    #Use For for all simulations
+    price_path = []
+    for n in range(0,NSimulations):
+        #price_path.append(np.concatenate((np.array([S0]),simulate_once(S0, mu, sigma, T, dt, num_steps, end_datetime, interval))))
+        price_path.append(simulate_once(S0, mu, sigma, T, dt, num_steps, end_datetime, interval))
+    df_simulations = pd.DataFrame(price_path)
+    
+    
+    # Ensure columns match `timestamps`
+    #if len(timestamps) == df_simulations.shape[1]:
+    #    df_simulations.columns = timestamps
+    #else:
+    #    raise ValueError("Mismatch between timestamps and simulation results dimensions.")
     
     # Calculate statistics
     percentiles_5 = df_simulations.apply(lambda x: np.percentile(x, 5), axis=0)
@@ -184,7 +208,7 @@ def GMB_Simulations(S0, mu, sigma, T, dt, NSimulations, end_datetime, interval):
     percentiles_95 = df_simulations.apply(lambda x: np.percentile(x, 95), axis=0)
     median = df_simulations.median(axis=0)
     mean = df_simulations.mean(axis=0)
-
+    
     return {
         'percentiles_5': percentiles_5,
         'percentiles_25': percentiles_25,
@@ -195,6 +219,8 @@ def GMB_Simulations(S0, mu, sigma, T, dt, NSimulations, end_datetime, interval):
         'mean': mean,
         'df_simulations': df_simulations,
     }
+
+
     
 def price_probability(df_simulations,price_target,tolerance):
     # Calculate probability within the specified range
@@ -212,8 +238,26 @@ def price_probability(df_simulations,price_target,tolerance):
     })
     
     return probability_df
+    
 
-def GBMS():
+        
+    # Calculate probability within the specified range
+    lower_bound = price_target - tolerance
+    upper_bound = price_target + tolerance
+    within_range = df_simulations.apply(lambda x: ((x >= lower_bound) & (x <= upper_bound)).mean(), axis=0)
+    above_range = df_simulations.apply(lambda x: ((x >= price_target)).mean(), axis=0)
+    below_range = df_simulations.apply(lambda x: ((x <= price_target)).mean(), axis=0)
+    
+    # Create a single DataFrame to join the three ranges
+    probability_df = pd.DataFrame({
+        'Within Range': within_range,
+        'Above Target': above_range,
+        'Below Target': below_range
+    })
+    
+    return probability_df
+
+def GBMS(ticker,interval,plot_interval,T,start_date,plot_start_date):
     
     interval_map = {'5m': 1/288, '15m': 1/96, '1h': 1/24, '1d': 1}
     max_days_map = {'5m': 60-1, '15m': 60-1, '1h': 730-1, '1d': 3650} # 3650 days (10 years) for daily data
@@ -221,25 +265,7 @@ def GBMS():
     yearly_returns = {'5m': 19656, '15m': 6552, '1h': 1638, '1d': 252}
     
     
-    #GUI Input Parameters
-    app = QApplication(sys.argv)
-    dialog = InputDialog()
-    if dialog.exec() == QDialog.Accepted:
-        # Access input parameters after the dialog is accepted
-        ticker = dialog.ticker
-        interval = dialog.interval
-        plot_interval = dialog.plot_interval
-        T = dialog.sim_length
-        start_date = dialog.start_date
-        plot_start_date = dialog.plot_start_date
-        
-        print(f'Ticker: {ticker}')
-        print(f'Interval: {interval}')
-        print(f'Plot Interval: {plot_interval}')
-        print(f'Simulation Length (days): {T}')
-        print(f'Start Date: {start_date}')
-        print(f'Plot Start Date: {plot_start_date}')
-    
+
     
     
     """
@@ -270,12 +296,12 @@ def GBMS():
     # Fetch data
     data, Name = fetch_data(ticker, start_date, interval)
     returns = data.pct_change().dropna()
-    S0 = data.iloc[-1]
+    S0 = data.iloc[-1].iloc[-1]
 
     #Translate interval return to log returns
     log_returns = np.log(returns + 1)
-    mu = log_returns.mean()
-    sigma = log_returns.std()
+    mu = log_returns.mean().iloc[0]
+    sigma = log_returns.std().iloc[0]
     end_datetime = max(data.index)
     
     #Simulate 1 random walk
@@ -284,7 +310,7 @@ def GBMS():
     
     
     #Statistical Simulations of GBM
-    NSimulations = 10000
+    NSimulations = 1000
     GBMS_dict = GMB_Simulations(S0, mu, sigma, T, dt, NSimulations, end_datetime, interval)
     data = pd.DataFrame({
         '5th Percentile': GBMS_dict['percentiles_5'],
@@ -332,7 +358,7 @@ def GBMS():
 
     
 
-    print(simulated_data)
+    #print(simulated_data)
 
     #HistData
     Hist_data, _ = fetch_data(ticker,plot_start_date,plot_interval)
@@ -353,18 +379,18 @@ def GBMS():
     fig = go.Figure()
 
     # Plot historical data
-    fig.add_trace(go.Scatter(x=Hist_data.index, y=Hist_data, mode='lines', name='Historical Prices', line=dict(color='blue')))
+    fig.add_trace(go.Scatter(x=Hist_data.index, y=Hist_data[ticker].tolist(), mode='lines', name='Historical Prices', line=dict(color='blue')))
 
     # Plot simulated data
-    fig.add_trace(go.Scatter(x=simulated_data.index, y=simulated_data['Simulated Price'], mode='lines', name='Simulated Prices', line=dict(color='red', dash='dash')))
+    fig.add_trace(go.Scatter(x=simulated_data.index, y=simulated_data['Simulated Price'].tolist(), mode='lines', name='Simulated Prices', line=dict(color='red', dash='dash')))
     # Add percentiles, median, and mean to the plot
-    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_5'], mode='lines', name='5th Percentile', line=dict(color='gray', dash="dot"), legendgroup = "5th Percentiles"))
-    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_25'], mode='lines', name='25th Percentile', line=dict(color='orange', dash='dash'), legendgroup = "25th Percentiles"))
-    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_50'], mode='lines', name='50th Percentile', line=dict(color='green', dash='dash'), legendgroup = "Metrics"))
-    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_75'], mode='lines', name='75th Percentile', line=dict(color='orange', dash='dash'), legendgroup = "25th Percentiles"))
-    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_95'], mode='lines', name='95th Percentile', line=dict(color='gray', dash='dot'), legendgroup = "5th Percentiles"))
-    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['median'], mode='lines', name='Median', line=dict(color='black'), legendgroup = "Metrics"))
-    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['mean'], mode='lines', name='Mean', line=dict(color='purple'), legendgroup = "Metrics"))
+    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_5'].tolist(), mode='lines', name='5th Percentile', line=dict(color='gray', dash="dot"), legendgroup = "5th Percentiles"))
+    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_25'].tolist(), mode='lines', name='25th Percentile', line=dict(color='orange', dash='dash'), legendgroup = "25th Percentiles"))
+    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_50'].tolist(), mode='lines', name='50th Percentile', line=dict(color='green', dash='dash'), legendgroup = "Metrics"))
+    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_75'].tolist(), mode='lines', name='75th Percentile', line=dict(color='orange', dash='dash'), legendgroup = "25th Percentiles"))
+    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_95'].tolist(), mode='lines', name='95th Percentile', line=dict(color='gray', dash='dot'), legendgroup = "5th Percentiles"))
+    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['median'].tolist(), mode='lines', name='Median', line=dict(color='black'), legendgroup = "Metrics"))
+    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['mean'].tolist(), mode='lines', name='Mean', line=dict(color='purple'), legendgroup = "Metrics"))
 
     
     fig.update_layout(title='GBMS - '+Name+": Annual Returns "+str(round(mu*yearly_factor*100,2))+"%, Monthly "+str(round(mu*monthly_factor*100,2))+"%; Annual Volatility "+str(round(sigma * np.sqrt(yearly_factor)*100,2))+"%. Monthly "+str(round(sigma * np.sqrt(monthly_factor)*100,2))+"%",
@@ -376,9 +402,32 @@ def GBMS():
                       height=800)
 
     # Save plot to HTML
-    pio.write_html(fig, file='GBM_simulations_plot.html', auto_open=True)
+    #pio.write_html(fig, file='GBM_simulations_plot.html', auto_open=True)
     return mu*monthly_factor,mu*yearly_factor, sigma * np.sqrt(monthly_factor),sigma * np.sqrt(yearly_factor),GBMS_dict["df_simulations"],fig
+    
+"""
+if __name__ == '__main__':
 
+    #GUI Input Parameters
+    app = QApplication(sys.argv)
+    dialog = InputDialog()
+    if dialog.exec() == QDialog.Accepted:
+        # Access input parameters after the dialog is accepted
+        ticker = dialog.ticker
+        interval = dialog.interval
+        plot_interval = dialog.plot_interval
+        T = dialog.sim_length
+        start_date = dialog.start_date
+        plot_start_date = dialog.plot_start_date
+            
+        print(f'Ticker: {ticker}')
+        print(f'Interval: {interval}')
+        print(f'Plot Interval: {plot_interval}')
+        print(f'Simulation Length (days): {T}')
+        print(f'Start Date: {start_date}')
+        print(f'Plot Start Date: {plot_start_date}')
 
+    r_mon, v_mon, r_yr, v_yr, df_simulations, fig = GBMS(ticker,interval,plot_interval,T,start_date,plot_start_date)
+    """
 
 

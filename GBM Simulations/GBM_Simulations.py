@@ -10,6 +10,7 @@ import plotly.graph_objs as go
 import plotly.io as pio
 from scipy import stats
 from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import Pool
 
 class InputDialog(QDialog):
     def __init__(self, chapters):
@@ -101,7 +102,7 @@ class InputDialog(QDialog):
 
 def fetch_data(ticker, start_date, interval):
     # Fetch price data
-    data = yf.download(ticker, start=start_date, interval=interval)
+    data = yf.download(ticker, start=start_date, interval=interval, auto_adjust=False)
     if data.empty:
         raise ValueError(f"{ticker}: No price data found for the given date range and interval.")
     
@@ -129,8 +130,12 @@ def geometric_brownian_motion(S0, mu, sigma, T, dt, num_steps, end_datetime, int
     S = S0 * np.exp(X)
     
     timestamps = generate_timestamps(end_datetime, num_steps, interval)
-    if len(timestamps)<len(S):
+    
+    # Ensure timestamps align with the length of S
+    if len(timestamps) < len(S):
         S = S[:len(timestamps)]
+    elif len(timestamps) > len(S):
+        timestamps = timestamps[:len(S)]
     
     return timestamps, S
 
@@ -170,14 +175,30 @@ def GMB_Simulations(S0, mu, sigma, T, dt, NSimulations, end_datetime, interval):
     num_steps = int(T / dt)
     timestamps, _ = geometric_brownian_motion(S0, mu, sigma, T, dt, num_steps, end_datetime, interval)
     
-    # Use ProcessPoolExecutor for parallel simulation
-    with ProcessPoolExecutor() as executor:
-        all_simulations = list(executor.map(simulate_once, [S0]*NSimulations, [mu]*NSimulations,
-                                            [sigma]*NSimulations, [T]*NSimulations, [dt]*NSimulations,
-                                            [num_steps]*NSimulations, [end_datetime]*NSimulations, [interval]*NSimulations))
+    #Use ProcessPoolExecutor for parallel simulation
+    #with ProcessPoolExecutor() as executor:
+    #    all_simulations = list(executor.map(simulate_once, [S0] * NSimulations, [mu] * NSimulations,[sigma] * NSimulations, [T] * NSimulations, [dt] * NSimulations,[num_steps] * NSimulations, [end_datetime] * NSimulations, [interval] * NSimulations))
+    #Use Multiprocessing
+    #with Pool() as pool:
+    #   all_simulations = pool.starmap(simulate_once, 
+    #                                  [(S0, mu, sigma, T, dt, num_steps, end_datetime, interval)] * NSimulations)
     
     # Convert to DataFrame for easier manipulation and calculation
-    df_simulations = pd.DataFrame(all_simulations, columns=timestamps)
+    #df_simulations = pd.DataFrame(all_simulations)
+    
+    #Use For for all simulations
+    price_path = []
+    for n in range(0,NSimulations):
+        #price_path.append(np.concatenate((np.array([S0]),simulate_once(S0, mu, sigma, T, dt, num_steps, end_datetime, interval))))
+        price_path.append(simulate_once(S0, mu, sigma, T, dt, num_steps, end_datetime, interval))
+    df_simulations = pd.DataFrame(price_path)
+    
+    
+    # Ensure columns match `timestamps`
+    #if len(timestamps) == df_simulations.shape[1]:
+    #    df_simulations.columns = timestamps
+    #else:
+    #    raise ValueError("Mismatch between timestamps and simulation results dimensions.")
     
     # Calculate statistics
     percentiles_5 = df_simulations.apply(lambda x: np.percentile(x, 5), axis=0)
@@ -187,8 +208,7 @@ def GMB_Simulations(S0, mu, sigma, T, dt, NSimulations, end_datetime, interval):
     percentiles_95 = df_simulations.apply(lambda x: np.percentile(x, 95), axis=0)
     median = df_simulations.median(axis=0)
     mean = df_simulations.mean(axis=0)
-
-
+    
     return {
         'percentiles_5': percentiles_5,
         'percentiles_25': percentiles_25,
@@ -199,6 +219,8 @@ def GMB_Simulations(S0, mu, sigma, T, dt, NSimulations, end_datetime, interval):
         'mean': mean,
         'df_simulations': df_simulations,
     }
+
+
     
 def price_probability(df_simulations,price_target,tolerance):
     # Calculate probability within the specified range
@@ -274,12 +296,12 @@ def GBMS(ticker,interval,plot_interval,T,start_date,plot_start_date):
     # Fetch data
     data, Name = fetch_data(ticker, start_date, interval)
     returns = data.pct_change().dropna()
-    S0 = data.iloc[-1]
+    S0 = data.iloc[-1].iloc[-1]
 
     #Translate interval return to log returns
     log_returns = np.log(returns + 1)
-    mu = log_returns.mean()
-    sigma = log_returns.std()
+    mu = log_returns.mean().iloc[0]
+    sigma = log_returns.std().iloc[0]
     end_datetime = max(data.index)
     
     #Simulate 1 random walk
@@ -288,7 +310,7 @@ def GBMS(ticker,interval,plot_interval,T,start_date,plot_start_date):
     
     
     #Statistical Simulations of GBM
-    NSimulations = 10000
+    NSimulations = 1000
     GBMS_dict = GMB_Simulations(S0, mu, sigma, T, dt, NSimulations, end_datetime, interval)
     data = pd.DataFrame({
         '5th Percentile': GBMS_dict['percentiles_5'],
@@ -357,18 +379,18 @@ def GBMS(ticker,interval,plot_interval,T,start_date,plot_start_date):
     fig = go.Figure()
 
     # Plot historical data
-    fig.add_trace(go.Scatter(x=Hist_data.index, y=Hist_data, mode='lines', name='Historical Prices', line=dict(color='blue')))
+    fig.add_trace(go.Scatter(x=Hist_data.index, y=Hist_data[ticker].tolist(), mode='lines', name='Historical Prices', line=dict(color='blue')))
 
     # Plot simulated data
-    fig.add_trace(go.Scatter(x=simulated_data.index, y=simulated_data['Simulated Price'], mode='lines', name='Simulated Prices', line=dict(color='red', dash='dash')))
+    fig.add_trace(go.Scatter(x=simulated_data.index, y=simulated_data['Simulated Price'].tolist(), mode='lines', name='Simulated Prices', line=dict(color='red', dash='dash')))
     # Add percentiles, median, and mean to the plot
-    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_5'], mode='lines', name='5th Percentile', line=dict(color='gray', dash="dot"), legendgroup = "5th Percentiles"))
-    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_25'], mode='lines', name='25th Percentile', line=dict(color='orange', dash='dash'), legendgroup = "25th Percentiles"))
-    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_50'], mode='lines', name='50th Percentile', line=dict(color='green', dash='dash'), legendgroup = "Metrics"))
-    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_75'], mode='lines', name='75th Percentile', line=dict(color='orange', dash='dash'), legendgroup = "25th Percentiles"))
-    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_95'], mode='lines', name='95th Percentile', line=dict(color='gray', dash='dot'), legendgroup = "5th Percentiles"))
-    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['median'], mode='lines', name='Median', line=dict(color='black'), legendgroup = "Metrics"))
-    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['mean'], mode='lines', name='Mean', line=dict(color='purple'), legendgroup = "Metrics"))
+    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_5'].tolist(), mode='lines', name='5th Percentile', line=dict(color='gray', dash="dot"), legendgroup = "5th Percentiles"))
+    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_25'].tolist(), mode='lines', name='25th Percentile', line=dict(color='orange', dash='dash'), legendgroup = "25th Percentiles"))
+    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_50'].tolist(), mode='lines', name='50th Percentile', line=dict(color='green', dash='dash'), legendgroup = "Metrics"))
+    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_75'].tolist(), mode='lines', name='75th Percentile', line=dict(color='orange', dash='dash'), legendgroup = "25th Percentiles"))
+    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_95'].tolist(), mode='lines', name='95th Percentile', line=dict(color='gray', dash='dot'), legendgroup = "5th Percentiles"))
+    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['median'].tolist(), mode='lines', name='Median', line=dict(color='black'), legendgroup = "Metrics"))
+    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['mean'].tolist(), mode='lines', name='Mean', line=dict(color='purple'), legendgroup = "Metrics"))
 
     
     fig.update_layout(title='GBMS - '+Name+": Annual Returns "+str(round(mu*yearly_factor*100,2))+"%, Monthly "+str(round(mu*monthly_factor*100,2))+"%; Annual Volatility "+str(round(sigma * np.sqrt(yearly_factor)*100,2))+"%. Monthly "+str(round(sigma * np.sqrt(monthly_factor)*100,2))+"%",

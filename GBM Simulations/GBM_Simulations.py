@@ -310,7 +310,7 @@ def GBMS(ticker,interval,plot_interval,T,start_date,plot_start_date):
     
     
     #Statistical Simulations of GBM
-    NSimulations = 1000
+    NSimulations = 10000
     GBMS_dict = GMB_Simulations(S0, mu, sigma, T, dt, NSimulations, end_datetime, interval)
     data = pd.DataFrame({
         '5th Percentile': GBMS_dict['percentiles_5'],

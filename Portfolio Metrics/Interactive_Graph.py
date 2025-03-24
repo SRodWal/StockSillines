@@ -5,49 +5,45 @@ import datetime as dt
 import pandas as pd
 from sklearn.cluster import KMeans
 import numpy as np
+import os
+
+
+os.environ["OMP_NUM_THREADS"] = "1"
+
 
 # Define the start date for fetching historical data
-start_date = dt.datetime(2022, 1, 1)
+start_date = dt.datetime(2024, 1, 1)
 
 # Define the stock symbols
 symbol_list = ["TSM", "AEP", "MSFT", "PEP", "WMT", "NEE", "QCOM"]
-interval = "1wk"
+interval = "1d"
+symbol = "FSLR"
 
 def calculate_pe_ratio(ticker, interval, start_date):
+    # Fetch historical data
     data = ticker.history(start=start_date, interval=interval)
-    
-    # Fetch quarterly earnings data
-    quarterly_earnings = ticker.quarterly_earnings
-    
-    # Check if quarterly earnings data is available
-    if quarterly_earnings is not None and not quarterly_earnings.empty:
-        # Create a DataFrame for the P/E ratio
-        pe_data = pd.DataFrame(data['Close'])
-        pe_data['Quarterly EPS'] = None
-        
-        for date in pe_data.index:
-            # Find the most recent quarterly earnings date
-            recent_earnings_date = quarterly_earnings[quarterly_earnings.index <= date].index.max()
-            if pd.notna(recent_earnings_date):
-                pe_data.loc[date, 'Quarterly EPS'] = quarterly_earnings.loc[recent_earnings_date, 'Earnings']
-        
-        # Calculate P/E ratio
-        pe_data['P/E Ratio'] = pe_data['Close'] / pe_data['Quarterly EPS']
-    else:
-        # If no quarterly earnings data, use trailing twelve months EPS for P/E ratio
-        pe_data = pd.DataFrame(data['Close'])
-        pe_data['P/E Ratio'] = data['Close'] / ticker.info['epsTrailingTwelveMonths']
-    
+
+    # Initialize an empty DataFrame for P/E ratio calculations
+    pe_data = pd.DataFrame(data['Close'])
+    pe_data['Quarterly EPS'] = ticker.info.get('epsTrailingTwelveMonths', None)
+    pe_data['P/E Ratio'] = pe_data["Close"] / pe_data["Quarterly EPS"]
+    pe_data["Forward EPS"] = ticker.info.get('forwardEps', None)
+    pe_data['P/E Forward'] = pe_data["Close"] / pe_data["Forward EPS"]
+
+
     return pe_data
 
 def calculate_ad_line(df):
     """Calculate the Accumulation/Distribution Line (A/D Line)."""
-    ad_line = []
-    ad_val = 0
+    ad_line = []  # Initialize an empty list to store A/D values
+    ad_val = 0    # Initial Accumulation/Distribution value
+    
     for i in range(len(df)):
-        clv = ((df['Close'][i] - df['Low'][i]) - (df['High'][i] - df['Close'][i])) / (df['High'][i] - df['Low'][i])
-        ad_val += clv * df['Volume'][i]
-        ad_line.append(ad_val)
+        # Use .iloc for positional indexing
+        clv = ((df['Close'].iloc[i] - df['Low'].iloc[i]) - (df['High'].iloc[i] - df['Close'].iloc[i])) / (df['High'].iloc[i] - df['Low'].iloc[i])
+        ad_val += clv * df['Volume'].iloc[i]
+        ad_line.append(ad_val)  # Append the calculated A/D value to the list
+    
     return ad_line
 
 def cluster_analysis(data):
@@ -60,7 +56,8 @@ def cluster_analysis(data):
     clustering_data_normalized = (clustering_data - clustering_data.mean()) / clustering_data.std()
     
     # Perform K-Means clustering
-    kmeans = KMeans(n_clusters=4)  # You can adjust the number of clusters
+    os.environ["OMP_NUM_THREADS"] = "1"
+    kmeans = KMeans(n_clusters=5)  # You can adjust the number of clusters
     kmeans.fit(clustering_data_normalized)
     
     # Add cluster labels to the data
@@ -94,8 +91,24 @@ def plot_candlestick_pe_ratio_volume_chart(symbol, start_date, interval):
     
     # Calculate P/E ratio
     pe_data = calculate_pe_ratio(ticker, interval, start_date)
+    
+    # Add P/E ratio line chart to subplot 2
+    fig.add_trace(go.Scatter(x=pe_data.index, y=pe_data['P/E Ratio'], 
+                         mode='lines', 
+                         line=dict(color='blue'), 
+                         name='P/E Ratio'), 
+              row=2, col=1)
+
+# Add P/E forward line chart to subplot 2
+    fig.add_trace(go.Scatter(x=pe_data.index, y=pe_data['P/E Forward'], 
+                         mode='lines', 
+                         line=dict(color='green'), 
+                         name='P/E Forward'),  # Updated name
+              row=2, col=1)
     # Add P/E ratio area chart (subplot 2)
-    fig.add_trace(go.Scatter(x=pe_data.index, y=pe_data['P/E Ratio'], mode='lines', line=dict(color='blue'), name='P/E Ratio'), row=2, col=1)
+    #fig.add_trace(go.Scatter(x=pe_data.index, y=pe_data['P/E Ratio'], mode='lines', line=dict(color='blue'), name='P/E Ratio'), row=2, col=1)
+    # Add P/E forward area chart (subplot 2)
+    #fig.add_trace(go.Scatter(x=pe_data.index, y=pe_data['P/E Forward'], mode='lines', line=dict(color='green'), name='P/E Ratio'), row=2, col=1)
 
     # Add volume vs. traded price distribution (subplot 3)
     fig.add_trace(go.Histogram(x=data['Close'], y=data['Volume'], histfunc='sum', nbinsx=25, name='Volume Distribution', marker=dict(color='orange')), row=3, col=1)
@@ -174,3 +187,5 @@ def plot_candlestick_pe_ratio_volume_chart(symbol, start_date, interval):
     # Show the chart
     fig.show()
     fig.write_html(f"{name}_stock_prices_clusters.html")
+
+plot_candlestick_pe_ratio_volume_chart(symbol, start_date, interval)

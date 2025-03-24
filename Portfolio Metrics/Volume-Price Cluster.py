@@ -7,24 +7,29 @@ from sklearn.cluster import KMeans
 import numpy as np
 
 # Define the start date for fetching historical data
+start_date = dt.datetime(2021, 1, 1)
+
+# Define the start date for fetching historical data
 start_date = dt.datetime(2024, 1, 1)
 
 # Define the stock symbols
 symbol_list = ["TSM", "AEP", "MSFT", "PEP", "WMT", "NEE", "QCOM"]
-interval = "1wk"
+interval = "1d"
+symbol = "FSLR"
+
 
 def cluster_analysis(data):
     """Perform K-Means clustering on volumes, traded prices, and time."""
     # Prepare the data for clustering
     clustering_data = data[['Close', 'Volume']]
     clustering_data = clustering_data.dropna()
-    clustering_data['Time'] = np.arange(len(clustering_data))
+    #clustering_data['Time'] = np.arange(len(clustering_data))
     
     # Normalize the data
     clustering_data_normalized = (clustering_data - clustering_data.mean()) / clustering_data.std()
     
     # Perform K-Means clustering
-    kmeans = KMeans(n_clusters=4)  # You can adjust the number of clusters
+    kmeans = KMeans(n_clusters=5)  # You can adjust the number of clusters
     kmeans.fit(clustering_data_normalized)
     
     # Add cluster labels to the data
@@ -48,7 +53,7 @@ def plot_3d_clusters(symbol, start_date, interval):
     # Create 3D scatter plot for clustering results
     scatter3d = Scatter3d(
         x=clustering_data['Close'],
-        y=clustering_data['Time'],
+        y=clustering_data['Date'],
         z=clustering_data['Volume'],
         mode='markers',
         marker=dict(
@@ -64,7 +69,7 @@ def plot_3d_clusters(symbol, start_date, interval):
     # Create 3D scatter plot for median points
     median_scatter3d = Scatter3d(
         x=cluster_medians['Close'],
-        y=cluster_medians['Time'],
+        y=cluster_medians['Date'],
         z=cluster_medians['Volume'],
         mode='markers',
         marker=dict(
@@ -81,7 +86,7 @@ def plot_3d_clusters(symbol, start_date, interval):
         title=f'{name} 3D Clustering: Price, Time, and Volume with Medians',
         scene=dict(
             xaxis=dict(title='Price'),
-            yaxis=dict(title='Time'),
+            yaxis=dict(title='Date'),
             zaxis=dict(title='Volume')
         ),
         template='simple_white',
@@ -107,4 +112,4 @@ def plot_3d_clusters(symbol, start_date, interval):
     fig_3d.show()
     fig_3d.write_html(f"{name}_stock_prices_3D_Cluster.html")
 
-
+plot_3d_clusters(symbol, start_date, interval)

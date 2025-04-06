@@ -10,12 +10,12 @@ import numpy as np
 start_date = dt.datetime(2021, 1, 1)
 
 # Define the start date for fetching historical data
-start_date = dt.datetime(2024, 1, 1)
+start_date = dt.datetime(2020, 1, 1)
 
 # Define the stock symbols
 symbol_list = ["TSM", "AEP", "MSFT", "PEP", "WMT", "NEE", "QCOM"]
-interval = "1d"
-symbol = "YPF"
+interval = "1wk"
+symbol = "SWI"
 
 
 def cluster_analysis(data):
@@ -29,7 +29,7 @@ def cluster_analysis(data):
     clustering_data_normalized = (clustering_data - clustering_data.mean()) / clustering_data.std()
     
     # Perform K-Means clustering
-    kmeans = KMeans(n_clusters=2)  # You can adjust the number of clusters
+    kmeans = KMeans(n_clusters=5)  # You can adjust the number of clusters
     kmeans.fit(clustering_data_normalized)
     
     # Add cluster labels to the data

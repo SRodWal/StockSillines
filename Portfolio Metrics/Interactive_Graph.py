@@ -12,12 +12,12 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 
 # Define the start date for fetching historical data
-start_date = dt.datetime(2025, 1, 1)
+start_date = dt.datetime(2020, 1, 1)
 
 # Define the stock symbols
 symbol_list = ["TSM", "AEP", "MSFT", "PEP", "WMT", "NEE", "QCOM"]
-interval = "1d"
-symbol = "APA"
+interval = "1wk"
+symbol = "SWI"
 
 def calculate_pe_ratio(ticker, interval, start_date):
     # Fetch historical data

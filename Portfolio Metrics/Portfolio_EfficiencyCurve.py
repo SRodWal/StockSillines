@@ -58,8 +58,8 @@ volatilities = df['Volatility'].values
 weights = df['Value'].values / df['Value'].sum()  # Normalize initial weights
 
 # Measure correlation
-start = '2023-01-01'
-end = '2024-12-31'
+start = '2024-01-01'
+end = '2025-12-31'
 
 def CorMatrix(df, start_date, end_date):
     tickers = list(df["Ticker"])
@@ -257,4 +257,4 @@ fig.update_layout(
 fig.show()
 
 # Optionally save the plot as an HTML file
-fig.write_html("efficient_frontier_Banking_WK13.html")
+fig.write_html("efficient_frontier_Banking_WK18.html")

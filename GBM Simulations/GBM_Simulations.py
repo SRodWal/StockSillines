@@ -371,7 +371,7 @@ def GBMS(ticker,interval,plot_interval,T,start_date,plot_start_date):
     plt.xlabel('Date')
     plt.ylabel('Price')
     plt.legend()
-    plt.show()
+    #plt.show()
     
 
     

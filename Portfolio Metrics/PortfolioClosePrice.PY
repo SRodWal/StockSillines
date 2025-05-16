@@ -39,7 +39,7 @@ for index, row in df.iterrows():
         "Ticker": ticker,
         "Close Price": latest_close,
         "GICS Sector": gics_sector,
-        "Expected Dividend Yield": dividend_yield
+        "Expected Dividend Yield %": dividend_yield
     })
 
 # Convert to a DataFrame

@@ -1,11 +1,14 @@
 # Import Custom Modules
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), "modules"))
+
 from GBM_Simulations import GBMS, InputDialog, price_probability
 from FinalPrice_DisFitting import Dist_Fitting, plot_probability_evolution
 import plotly.io as pio
 import pandas as pd
 import tkinter as tk
 from tkinter import simpledialog
-import sys
 from PyQt5.QtWidgets import QApplication, QDialog
 import yfinance as yf
 
@@ -202,4 +205,4 @@ if __name__ == "__main__":
         kpi_df = pd.DataFrame(kpis)
 
         # Generate HTML report
-        guardar_graficas_html("GBM Simulations/GBMS_Report_Banking_90D.html", kpi_df, tickers_info, figs_dict)
+        guardar_graficas_html("GBM Simulations/GBMS_Report_Banbking&USConcumser-5Y.html", kpi_df, tickers_info, figs_dict)

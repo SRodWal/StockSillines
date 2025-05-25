@@ -146,7 +146,7 @@ def Dist_Fitting(df_simulations, Ndist, Name):
         barmode='overlay',
         autosize=False,
         width=1000,
-        height=800  # Increased height to accommodate the table
+        height=600  # Increased height to accommodate the table
     )
 
     # Return the figure

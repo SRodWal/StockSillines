@@ -384,11 +384,11 @@ def GBMS(ticker,interval,plot_interval,T,start_date,plot_start_date):
     # Plot simulated data
     fig.add_trace(go.Scatter(x=simulated_data.index, y=simulated_data['Simulated Price'].tolist(), mode='lines', name='Simulated Prices', line=dict(color='red', dash='dash')))
     # Add percentiles, median, and mean to the plot
-    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_5'].tolist(), mode='lines', name='5th Percentile', line=dict(color='gray', dash="dot"), legendgroup = "5th Percentiles"))
+    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_5'].tolist(), mode='lines', name='5th Percentile', line=dict(color='gray', dash="dot"), legendgroup = "5th Percentiles",visible = "legendonly"))
     fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_25'].tolist(), mode='lines', name='25th Percentile', line=dict(color='orange', dash='dash'), legendgroup = "25th Percentiles"))
     fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_50'].tolist(), mode='lines', name='50th Percentile', line=dict(color='green', dash='dash'), legendgroup = "Metrics"))
     fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_75'].tolist(), mode='lines', name='75th Percentile', line=dict(color='orange', dash='dash'), legendgroup = "25th Percentiles"))
-    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_95'].tolist(), mode='lines', name='95th Percentile', line=dict(color='gray', dash='dot'), legendgroup = "5th Percentiles"))
+    fig.add_trace(go.Scatter(x=t, y=GBMS_dict['percentiles_95'].tolist(), mode='lines', name='95th Percentile', line=dict(color='gray', dash='dot'), legendgroup = "5th Percentiles", visible = "legendonly"))
     fig.add_trace(go.Scatter(x=t, y=GBMS_dict['median'].tolist(), mode='lines', name='Median', line=dict(color='black'), legendgroup = "Metrics"))
     fig.add_trace(go.Scatter(x=t, y=GBMS_dict['mean'].tolist(), mode='lines', name='Mean', line=dict(color='purple'), legendgroup = "Metrics"))
 
@@ -399,7 +399,7 @@ def GBMS(ticker,interval,plot_interval,T,start_date,plot_start_date):
                       legend=dict(x=0, y=1.0),
                       autosize=False,
                       width=1000,
-                      height=800)
+                      height=600)
 
     # Save plot to HTML
     #pio.write_html(fig, file='GBM_simulations_plot.html', auto_open=True)

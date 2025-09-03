@@ -85,11 +85,11 @@ def GBM_Simulation(ticker,start_date,end_date,start_plotdate,end_dateplot,simula
     
     if open_position_view == "Both":
         price_paths_df,annual_volatility,name = price_walk(ticker,start_date,end_date,adjusted_return,simulations,T)
-        price_paths_df2,_,_= price_walk(ticker,start_date,end_dateplot,adjusted_return,simulations,T)
+        price_paths_df2,_,_= price_walk(ticker,start_date,end_date,adjusted_return,simulations,T)
     elif open_position_view == True:
         price_paths_df,annual_volatility,name = price_walk(ticker,start_date,end_date,adjusted_return,simulations,T)
     else:
-        price_paths_df,annual_volatility,name = price_walk(ticker,start_date,end_dateplot,adjusted_return,simulations,T)
+        price_paths_df,annual_volatility,name = price_walk(ticker,start_date,end_date,adjusted_return,simulations,T)
             
     
     

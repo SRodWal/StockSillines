@@ -20,7 +20,7 @@ def stock_metrics(ticker):
     cashflow = stock.cashflow.T
     stock = yf.Ticker(ticker)
     # Get the name of the stock
-    stock_name = stock.info['longName']
+    stock_name = stock.info['shortName']
     
     
     """

@@ -23,15 +23,15 @@ warnings.filterwarnings("ignore")
 
 
 
-ticker = "MC.PA"
+ticker = "USDMXN=X"
 current_date = datetime.now()
-end_date =  "2024-06-17"
+end_date =  "2024-10-17"
 end_dateplot = current_date + timedelta(days=365)
 start_plotdate = current_date - timedelta(days=365)
 T = 1 # Horizon Years
 #start_date = current_date - timedelta(days=365)
 start_date = "2023-01-01"
-simulations = 10000 # Number of simulations
+simulations = 1000 # Number of simulations
 adjusted_return = 1
 position_price = (165.93)
 open_position_view = True
@@ -44,7 +44,7 @@ def price_walk(ticker,start_date,end_date,adjusted_return,simulations,T):
     info = yf.Ticker(ticker).info
     name = name = info["longName"]
     stock_data = yf.download(ticker, start=start_date, end=end_date,progress=False)
-    stock_data['Daily Return'] = stock_data['Adj Close'].pct_change()
+    stock_data['Daily Return'] = stock_data['Close'].pct_change()
     # Standard deviation of daily returns, mu
     volatility = stock_data['Daily Return'].std()
     # Annualize the volatility (assuming 252 trading days in a year), sigma
@@ -52,7 +52,7 @@ def price_walk(ticker,start_date,end_date,adjusted_return,simulations,T):
     #print(f"Annualized Volatility: {annual_volatility}")
     
     # Parameters
-    S0 = stock_data['Adj Close'][-1]  # Last closing price
+    S0 = stock_data['Close'].iloc[-1][0]  # Last closing price
     #T = simulations  # Time horizon in years
     dt = 1/252  # Daily steps
     N = int(T / dt)  # Number of steps
@@ -87,9 +87,9 @@ def weightprice_walk(ticker,start_date,end_date,adjusted_return,simulations,T):
     info = yf.Ticker(ticker).info
     name = name = info["longName"]
     stock_data = yf.download(ticker, start=start_date, end=end_date,progress=False)
-    stock_data['Daily Return'] = stock_data['Adj Close'].pct_change()
-    stock_data["Weighted Return"] = stock_data['Daily Return']*stock_data["Volume"]
-    stock_data["Sqrt Weighted Return"] = (stock_data['Daily Return']**2)*stock_data["Volume"]
+    stock_data['Daily Return'] = stock_data['Close'].pct_change()
+    stock_data["Weighted Return"] = stock_data[("Volume", ticker)]*stock_data[("Daily Return","")]
+    stock_data["Sqrt Weighted Return"] = stock_data[("Volume", ticker)]*(stock_data[("Daily Return","")]**2)
     # Calculate the sum of weighted returns and total volume for each day
     weighted_sum = stock_data['Weighted Return'].sum()
     sqrt_weighted_sum = stock_data['Sqrt Weighted Return'].sum()
@@ -104,19 +104,19 @@ def weightprice_walk(ticker,start_date,end_date,adjusted_return,simulations,T):
     #print(f"Annual Weighted Volatility: {annual_volatility}")
     
     # Parameters
-    S0 = stock_data['Adj Close'][-1]  # Last closing price
+    S0 = stock_data['Close'].iloc[-1][0]  # Last closing price
     #T = simulations  # Time horizon in years
     dt = 1/252  # Daily steps
     N = int(T / dt)  # Number of steps
     mu = weighted_sum / total_volume * 252 * adjusted_return  # Annualized mean return
     sigma = (annual_volatility)*adjusted_return  # Annualized volatility
     # Generate random daily returns
-    daily_returns = np.exp((mu - 0.5 * sigma**2) * dt + sigma * np.sqrt(dt) * np.random.randn(N))
+    daily_returns = np.exp((mu[0] - 0.5 * sigma[0]**2) * dt + sigma[0] * np.sqrt(dt) * np.random.randn(N))
     # Initialize an array to store the price paths
     price_paths = np.zeros((N, simulations))
     for i in range(simulations):
         # Generate random daily returns
-        daily_returns = np.exp((mu - 0.5 * sigma**2) * dt + sigma * np.sqrt(dt) * np.random.randn(N))
+        daily_returns = np.exp((mu[0] - 0.5 * sigma[0]**2) * dt + sigma[0] * np.sqrt(dt) * np.random.randn(N))
     
         # Simulate stock price path
         price_paths[0, i] = S0
@@ -136,7 +136,7 @@ def Weekly_Volatility(ticker,start_date,end_date):
     # Fetch historical data for a stock (e.g., Apple)
     stock_data = yf.download(ticker, start=start_date, end=end_date, interval = "1wk")
     # Resample to weekly data and calculate weekly returns
-    stock_data['Weekly Return'] = stock_data['Adj Close'].pct_change()
+    stock_data['Weekly Return'] = stock_data['Close'].pct_change()
     # Calculate weekly volatility (standard deviation of weekly returns)
     stock_data['Weekly Volatility'] = stock_data['Weekly Return'].rolling(window=5).std() * np.sqrt(5)
 
@@ -166,8 +166,8 @@ def GBM_Simulation(ticker,start_date,end_date,start_plotdate,end_dateplot,simula
     if open_position_view == "Both":
         price_paths_df,annual_volatility,name = price_walk(ticker,start_date,end_date,adjusted_return,simulations,T)
         wprice_paths_df,annual_Wvolatility,_ = weightprice_walk(ticker, start_date, end_date, adjusted_return, simulations, T)
-        price_paths_df2,annual_volatility,_= price_walk(ticker,start_date,end_dateplot,adjusted_return,simulations,T)
-        wprice_paths_df2,annual_Wvolatility2,_ = weightprice_walk(ticker, start_date, end_dateplot, adjusted_return, simulations, T)
+        price_paths_df2,annual_volatility,_= price_walk(ticker,start_date,end_dateplot,adjusted_return,simulations,(end_dateplot-end_date).days/252)
+        wprice_paths_df2,annual_Wvolatility2,_ = weightprice_walk(ticker, start_date, end_dateplot, adjusted_return, simulations, (end_dateplot-end_date).days/252)
     elif open_position_view == True:
         price_paths_df,annual_volatility,name = price_walk(ticker,start_date,end_date,adjusted_return,simulations,T)
         wprice_paths_df,annual_Wvolatility2,_ = weightprice_walk(ticker, start_date, end_date, adjusted_return, simulations, T)
@@ -255,19 +255,19 @@ def GBM_Simulation(ticker,start_date,end_date,start_plotdate,end_dateplot,simula
     
     #Plot historical prices    
     plot_stock_data = yf.download(ticker, start=start_plotdate, end=end_dateplot,progress=False)
-    plt.plot(plot_stock_data["Adj Close"], label = "Adjusted Close Price") # Plot Historical price
-    close_price = plot_stock_data["Adj Close"].loc[max(plot_stock_data.index)]
+    plt.plot(plot_stock_data[("Close",ticker)], label = "Adjusted Close Price") # Plot Historical price
+    close_price = plot_stock_data[("Close",ticker)].loc[max(plot_stock_data.index)]
     
     plt.title(name+' GBM Price Evolution - Annualized Volatility: '+str((100*annual_volatility).round(2))+"%")
     plt.xlabel('Days')
     plt.ylabel('Price')
     plt.legend(loc = "upper left")   
-    projection_path = "Resources/"+name+"_projection_T="+str(T)+".png"
+    projection_path = "Resources/"+name.replace("/","-")+"_projection_T="+str(T)+".png"
     plt.savefig(projection_path)
     plt.show()
     plt.close()
     
-    # Plot the distribution of final prices
+    # Plot the distribution of final prices & Lastest close price
     final_price = price_paths_df2.loc[max(price_paths_df2.index)]
     plt.figure(figsize=(10, 6),dpi=150)
     plt.hist(final_price, bins=100, edgecolor='black')
@@ -279,7 +279,7 @@ def GBM_Simulation(ticker,start_date,end_date,start_plotdate,end_dateplot,simula
     plt.xlabel('Price')
     plt.ylabel('Frequency')
     plt.legend()
-    distribution_path = "Resources/"+name+"_distribution_T="+str(T)+".png"
+    distribution_path = "Resources/"+name.replace("/","-")+"_distribution_T="+str(T)+".png"
     plt.savefig(distribution_path)
     plt.show()
     
@@ -287,18 +287,18 @@ def GBM_Simulation(ticker,start_date,end_date,start_plotdate,end_dateplot,simula
     
     #Expected Returns
     percentiles = [5,25,45,50,65,75,95]
-    print(name+"; Open position: "+str(position_price)+" with "+str(int(T*365))+" Days Maturity")
+    #print(name+"; Open position: "+str(position_price)+" with "+str(int(T*365))+" Days Maturity")
     data = {
-            "Price Description":[str(p)+"th percentile" for p in percentiles],
-            "Forward Price":[final_price.quantile(p/100).round(2) for p in percentiles]
+            "Price Description":[str(p)+"th percentile" for p in percentiles]+["Close Price"],
+            "Forward Price":[final_price.quantile(p/100).round(2) for p in percentiles]+[round(close_price,2)]
             }
     df_profit = pd.DataFrame(data)
     df_profit["Profit Margin (%)"] = 100*(df_profit["Forward Price"]-position_price)/df_profit["Forward Price"]
     df_profit["Profit Margin (%)"] = df_profit["Profit Margin (%)"].round(2)
     
     #Obtain HWHM prices
-    print(tabulate(df_profit, headers='keys', tablefmt='pretty'))
-    maturity_path = "Resources/"+name+"_maturity_T="+str(T)+".csv"
+    #print(tabulate(df_profit, headers='keys', tablefmt='pretty'))
+    maturity_path = "Resources/"+name.replace("/","-")+"_maturity_T="+str(T)+".csv"
     df_profit.to_csv(maturity_path, index = False)
     
     
@@ -312,7 +312,7 @@ def GBM_Simulation(ticker,start_date,end_date,start_plotdate,end_dateplot,simula
     # Plot the distribution of stock prices over time
     plt.figure(figsize=(12, 8))
     sns.kdeplot(data=price_paths_long, x='Date', y='Price', fill=True, cmap='viridis')
-    sns.lineplot(data = stock_data, x = "Date", y="Adj Close")
+    sns.lineplot(data = stock_data, x = "Date", y="Close")
     plt.title('Density Plot of Simulated Stock Price Distributions Over Time')
     plt.xlabel('Date')
     plt.ylabel('Price')
@@ -325,8 +325,8 @@ def GBM_Simulation(ticker,start_date,end_date,start_plotdate,end_dateplot,simula
 #tickers = ["AMAT","GOOGL",'QCOM',"NVDA","TSM","KMB","AAPL","MSFT","MO","MA","NEE","PEP","V"]
 #open_prices = [244.47,190.71,188.12,131.38,189.11,147.67,225.34,432.57,51.24,455.40,77.53,165.93,260.8]
 
-#for ticker,position_price in zip(["AAPL"],[225.34222]):
-#    GBM_Simulation(ticker,start_date,"2024-07-3",start_plotdate,end_dateplot,100000,adjusted_return,(225.34222)/1,60/365,False,0)
+#for ticker,position_price in zip(["USDMXN=X"],[20.40]):
+#    GBM_Simulation(ticker,start_date,"2024-07-3",start_plotdate,end_dateplot,100000,adjusted_return,position_price,60/365,False,0)
 
 
 

@@ -10,13 +10,15 @@ import numpy as np
 from datetime import datetime, timedelta
 import os
 from fpdf import FPDF
+import tkinter as tk
+from tkinter import simpledialog
 
 #Custome
 from Volatility_and_Expected_Return import GBM_Simulation
-from Interactive_Graph import int_candlestickgraph
+#from Interactive_Graph import int_candlestickgraph
 from Stock_Metrics import stock_metrics
 
-f_dir = r"D:/Professional_WorkTools/Github/RodWal-Portfolio/Open Positions.xlsx"
+f_dir = r"D:/Professional_WorkTools/Github/StockSillines/Open Positions.xlsx"
 
 class PDF(FPDF):
     def header(self):
@@ -35,7 +37,7 @@ class PDF(FPDF):
         
     def subsection_title(self, title):
         self.set_font('Arial', "", 8)
-        self.cell(0, 10, title, 0, 1, 'L')
+        self.cell(0, 10, title, 0, 1, 'L') 
         self.ln(0)
         
 
@@ -79,13 +81,40 @@ class PDF(FPDF):
 
 
 
+def Selector(lst):
+    def on_select():
+        nonlocal selected_items
+        selected_items = [lst[i] for i in lb.curselection()]
+        root.destroy()
+    
+    selected_items = []
+    
+    root = tk.Tk()
+    root.title("Multi-Select List")
+    root.geometry("300x300")
+
+    lb = tk.Listbox(root, selectmode=tk.MULTIPLE)
+    for item in lst:
+        lb.insert(tk.END, item)
+    lb.pack(padx=10, pady=10)
+
+    select_button = tk.Button(root, text="Select", command=on_select)
+    select_button.pack(pady=10)
+
+    root.mainloop()
+    
+    return selected_items
+    
+
+
+
 
 # REad
 portfolio_df = pd.read_excel(f_dir)
-positiondate_df = portfolio_df.sort_values(by = ["Date"], ascending = False).drop_duplicates(subset = ["Ticket"])
-open_positions_df = portfolio_df[["Ticket","Value","Volume"]].groupby(["Ticket"]).sum()
+positiondate_df = portfolio_df.sort_values(by = ["Date"], ascending = False).drop_duplicates(subset = ["Ticker"])
+open_positions_df = portfolio_df[["Ticker","Value","Volume"]].groupby(["Ticker"]).sum()
 open_positions_df["Avg Price"] = open_positions_df["Value"]/open_positions_df["Volume"]
-open_positions_df = pd.merge(open_positions_df,positiondate_df[["Ticket","Date","Chapter"]], on = "Ticket")
+open_positions_df = pd.merge(open_positions_df,positiondate_df[["Ticker","Date","Chapter"]], on = "Ticker")
 
 
 current_date = datetime.now()
@@ -98,8 +127,9 @@ PP = 0 # Percentile graphs
 
 pdf = PDF()
 chapter_list = list(set(open_positions_df["Chapter"]))
+selected_chapters = Selector(chapter_list)
 
-for chapter in chapter_list[:]:
+for chapter in selected_chapters:
     mini_open_positions_df = open_positions_df.loc[open_positions_df["Chapter"]==chapter]
     pdf.add_page()
     pdf.chapter_title(chapter+" Portfolio")
@@ -113,7 +143,7 @@ for chapter in chapter_list[:]:
     #Add Companies' financials
     for item in mini_open_positions_df.loc[:].index:
         position = open_positions_df.loc[item]   
-        ticker = position.Ticket #Stock Symbol
+        ticker = position.Ticker #Stock Symbol
         finance, metric, name = stock_metrics(ticker)
         financials.append(finance)
         metrics.append(metric)
@@ -138,7 +168,7 @@ for chapter in chapter_list[:]:
 
     for item in mini_open_positions_df.loc[:].index:
         position = open_positions_df.loc[item]    
-        ticker = position.Ticket #Stock Symbol
+        ticker = position.Ticker #Stock Symbol
         position_price = position["Avg Price"]
         pdf.add_page()
         pdf.section_title('Price Evolution for '+ticker+" - Open Position: "+str(position_price.round(2)))
@@ -146,24 +176,28 @@ for chapter in chapter_list[:]:
         price_img = []
         dist_img = []
         subsection = ["1 Year Maturity","90-Days Maturity","4-Weeks Maturity"]
-        for t, vdays,pdays,subsec in zip([1,90/365,4/52],[720,360,120],[364,120,90],subsection):
-            start_date = current_date -timedelta(days = vdays) # Volatility Study Range, start date
-            end_date = position.Date # Volatility Study Range, start date
-            
-            start_plotdate = current_date - timedelta(days = pdays)
-            start_plotdate = end_date-timedelta(days = vdays) if start_plotdate >= end_date else start_plotdate
-            start_date = start_date - timedelta(days = vdays) if abs((end_date - start_date).days)<7*4 else start_date
-            end_dateplot = current_date + timedelta(days = 1)
         
-            projection_img, distribution_img, maturity_csv = GBM_Simulation(ticker,start_date,end_date,start_plotdate,end_dateplot,simulations,adjusted_return,position_price,t,open_position_view,PP)
+        for t, vdays,pdays,subsec in zip([1,90/365,4/52],[720,360,120],[364,120,90],subsection):
+            try:
+                start_date = current_date -timedelta(days = vdays) # Volatility Study Range, start date
+                end_date = position.Date # Volatility Study Range, start date
+                
+                start_plotdate = current_date - timedelta(days = pdays)
+                start_plotdate = end_date-timedelta(days = vdays) if start_plotdate >= end_date else start_plotdate
+                start_date = start_date - timedelta(days = vdays) if ((end_date - start_date).days)<7*4 else start_date
+                end_dateplot = current_date + timedelta(days = 1)
             
-            price_img.append(projection_img)
-            dist_img.append(distribution_img)
-            profitability_table.append(maturity_csv)
-    
-            #pdf.subsection_title('Price Evolution with '+chapter)
-            #pdf.add_images([projection_img, distribution_img])
-            #pdf.add_table(maturity_csv)
+                projection_img, distribution_img, maturity_csv = GBM_Simulation(ticker,start_date,end_date,start_plotdate,end_dateplot,simulations,adjusted_return,position_price,t,open_position_view,PP)
+                
+                price_img.append(projection_img)
+                dist_img.append(distribution_img)
+                profitability_table.append(maturity_csv)
+        
+                #pdf.subsection_title('Price Evolution with '+chapter)
+                #pdf.add_images([projection_img, distribution_img])
+                #pdf.add_table(maturity_csv)
+            except:
+                print("Faild to execute on: "+ticker+" with "+subsec)
         
         for price,dist,subsec in zip(price_img,dist_img,subsection):
             pdf.subsection_title('Price Evolution with '+subsec)
@@ -177,5 +211,5 @@ for chapter in chapter_list[:]:
             pdf.add_table(table)
             
 
-pdf.output('pricing_report.pdf')     
+pdf.output('pricing_report_WK14F.pdf')     
 
